@@ -23,7 +23,7 @@ contract TokenReputationFactory is Ownable {
         string memory symbol = string(
             abi.encodePacked(adminToken.symbol(), id.toString())
         );
-        uint participationRateTokens = (_initialSupply *
+        uint256 participationRateTokens = (_initialSupply *
             _rules.adminLegacyFeePercentage) / 100;
 
         TokenReputation newToken = new TokenReputation(
