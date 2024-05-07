@@ -14,7 +14,6 @@ contract TokenReputationFactory is Ownable {
     function mint(
         address _sponsored,
         string memory _name,
-        uint8 _decimals,
         uint256 _initialSupply,
         DataTypes.AdminRules memory _rules
     ) public returns (address) {
@@ -29,10 +28,10 @@ contract TokenReputationFactory is Ownable {
         TokenReputation newToken = new TokenReputation(
             _name,
             symbol,
-            _decimals,
             _initialSupply,
             _rules.adminMintFeePercentage,
             _rules.adminLegacyFeePercentage,
+            _rules.adminRevokeFeePercentage,
             _rules.governancePercentageToTokensPercentage,
             _rules.sponsorTokenRequirement
         );

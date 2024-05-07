@@ -6,7 +6,6 @@ interface ITokenReputationFactory {
     function mint(
         address _sponsored,
         string memory _name,
-        uint8 _decimals,
         uint256 _initialSupply,
         DataTypes.AdminRules memory _rules
     ) external returns (address);

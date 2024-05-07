@@ -14,13 +14,17 @@ import {DataTypes} from "./libraries/DataTypes.sol";
 // My404 contract inherits ERC404 to create a custom token with both ERC-20 and ERC-721 features
 contract TokenReputation is ERC20, Ownable {
     // Public variables to store URIs for token metadata
+    event NewTokenOnboarded(
+        address indexed token,
+        address indexed to,
+        uint256 value
+    );
     string public dataURI;
     string public baseTokenURI;
     uint256 public tokensLegacy;
     address public source;
+    DataTypes.AdminRules public rules;
     using Strings for uint256;
-
-    DataTypes.AdminRules rules;
 
     mapping(address => uint256) public poolTokensForGovernance;
     mapping(address => uint256) public poolTokensForSponsor;
@@ -69,29 +73,31 @@ contract TokenReputation is ERC20, Ownable {
     constructor(
         string memory _name,
         string memory _symbol,
-        uint8 _decimal,
         uint256 _totalSupply,
         uint8 _mintFeePercentage,
         uint8 _legacyFeePercentage,
+        uint8 _adminRevokeFeePercentage,
         uint8 _governancePercentageToSponsorPercentage,
         uint256 _tokenRequirement
     ) ERC20(_name, _symbol) Ownable(msg.sender) {
-        _mint(msg.sender, _totalSupply * 10 ** _decimal); // Setting the initial balance of tokens for the owner
+        _mint(msg.sender, _totalSupply); // Setting the initial balance of tokens for the owner
 
         DataTypes.AdminRules memory newRules;
         newRules.adminLegacyFeePercentage = _legacyFeePercentage;
         newRules.adminMintFeePercentage = _mintFeePercentage;
         newRules.sponsorTokenRequirement = _tokenRequirement;
+        newRules.adminRevokeFeePercentage = _adminRevokeFeePercentage;
         rules = newRules;
         source = msg.sender;
+        emit NewTokenOnboarded(address(this), msg.sender, _totalSupply);
     }
 
-    function onboardParticipantToken(
+    function onboardParticipant(
         address _factory,
         uint256 _amount,
         address _sponsored,
         string calldata _name
-    ) public onlyAdminOf(address(this)) {
+    ) public onlyAdminOf(address(this)) returns (address) {
         DataTypes.AdminRules memory _rules;
         if (particularRules[_sponsored].customRules) {
             _rules = particularRules[_sponsored];
@@ -105,7 +111,6 @@ contract TokenReputation is ERC20, Ownable {
         address newToken = ITokenReputationFactory(_factory).mint(
             _sponsored,
             _name,
-            decimals(),
             _amount,
             _rules
         );
@@ -115,6 +120,8 @@ contract TokenReputation is ERC20, Ownable {
             isBanned[_sponsored] = false;
         }
         tokensLegacy += 1;
+        emit NewTokenOnboarded(address(newToken), _sponsored, _amount);
+        return newToken;
     }
 
     function engageReputation(uint256 _amount, address _token) public {
