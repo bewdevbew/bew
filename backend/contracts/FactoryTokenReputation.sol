@@ -18,12 +18,12 @@ contract TokenReputationFactory is Ownable {
         DataTypes.AdminRules memory _rules
     ) public returns (address) {
         ITokenReputation adminToken = ITokenReputation(msg.sender);
-        uint256 id = adminToken.tokensLegacy() + 1;
+        uint256 id = adminToken.legacyLength() + 1;
         string memory symbol = string(
             abi.encodePacked(adminToken.symbol(), id.toString())
         );
         uint256 participationRateTokens = (_initialSupply *
-            _rules.adminLegacyFeePercentage) / 100;
+            _rules.adminMintFeePercentage) / 100;
 
         TokenReputation newToken = new TokenReputation(
             _name,
@@ -35,8 +35,10 @@ contract TokenReputationFactory is Ownable {
             _rules.governancePercentageToTokensPercentage,
             _rules.sponsorTokenRequirement
         );
-        newToken.transfer(_sponsored, _initialSupply - participationRateTokens);
 
+        newToken.transfer(adminToken.owner(), participationRateTokens);
+        newToken.transfer(_sponsored, _initialSupply - participationRateTokens);
+        newToken.transferOwnership(_sponsored);
         return address(newToken);
     }
 }

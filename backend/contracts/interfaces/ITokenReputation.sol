@@ -88,13 +88,13 @@ interface ITokenReputation {
     ) external returns (bool);
     function dataURI() external view returns (string calldata _uri);
     function baseTokenURI() external view returns (string calldata _uri);
-    function tokensLegacy() external view returns (uint);
+    function legacyLength() external view returns (uint);
     function source() external view returns (address);
-
+    function owner() external view returns (address);
     function poolTokensForGovernance(
         address _addr
     ) external view returns (uint256);
-    function poolTokensForSponsor(
+    function poolTokensReputation(
         address _addr
     ) external view returns (uint256);
     function particularRules(

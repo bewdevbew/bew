@@ -7,6 +7,8 @@ import { expect } from "chai";
 import hre, { ethers } from "hardhat";
 import { TokenReputation, TokenReputationFactory } from "../typechain-types";
 import { Signer } from "ethers";
+import { uint256 } from "../utils/unit";
+import { ERRORS } from "../utils/error";
 
 const PROTOCOL_NAME = "ZERODAY";
 const PROTOCOL_SYMBOL = "0DAY";
@@ -41,7 +43,7 @@ const deployContract = async () => {
 
 const getChildToken = async (address: `0x${string}`) => {
   const Token = await hre.ethers.getContractFactory("TokenReputation");
-  return Token.attach(address);
+  return Token.attach(address) as TokenReputation;
 };
 
 describe("TokenReputation", function () {
@@ -115,10 +117,19 @@ describe("TokenReputation", function () {
         to: events[0].args?.to,
         child: events[0].args?.token,
         amount: events[0].args?.value,
+      } as {
+        to: `0x${string}`;
+        child: `0x${string}`;
+        amount: BigInt;
       };
     };
 
     let childSupply = ethers.parseEther("100");
+
+    it("Should have 0 legacy", async function () {
+      expect(await token.legacyLength()).to.be.equal(0);
+    });
+
     it("Should create new token", async function () {
       const tx = await onboardParticipant({});
       expect(await addr1.getAddress()).to.be.equal(tx.to);
@@ -127,21 +138,82 @@ describe("TokenReputation", function () {
     it("Should send GENESIS TOKEN to new participant", async function () {
       await onboardParticipant({});
       let balance = await token.balanceOf(await addr1.getAddress());
-    });
-    it("Should send NEW TOKEN to ADMIN", async function () {
-      await onboardParticipant({});
-      let balance = (childSupply * BigInt(RULES.legacy)) / 100n;
+      expect(balance).to.be.equal((childSupply * BigInt(RULES.legacy)) / 100n);
     });
     it("Should send NEW TOKEN to new participant", async function () {
-      await onboardParticipant({});
+      const { child } = await onboardParticipant({});
+      const childToken = await getChildToken(child);
+      let balance = await childToken.balanceOf(await addr1.getAddress());
+
+      expect(balance).to.be.equal(
+        childSupply - (childSupply * BigInt(RULES.mint)) / 100n
+      );
     });
-    it("Should keep txs fees to new participant");
-    it("Should transfer NEW TOKEN ownership to new participant");
-    it("Should increment tokensLegacy");
+    it("Should send NEW TOKEN to ADMIN GENESIS TOKEN", async function () {
+      const { child } = await onboardParticipant({});
+      const childToken = await getChildToken(child);
+      let balance = await childToken.balanceOf(await owner.getAddress());
+
+      expect(balance).to.be.equal((childSupply * BigInt(RULES.mint)) / 100n);
+    });
+
+    it("Should transfer ownership to new participant", async function () {
+      const { child } = await onboardParticipant({});
+      const childToken = await getChildToken(child);
+      expect(await childToken.owner()).to.be.equal(await addr1.getAddress());
+    });
+    it("Should increment legacyLength", async function () {
+      await onboardParticipant({});
+      expect(await token.legacyLength()).to.be.equal(1);
+    });
+
+    it("Should work even if admin isn't owner", async function () {
+      let balanceAdmin = await token.balanceOf(await owner.getAddress());
+      await token.transfer(await addr1.getAddress(), balanceAdmin / 2n + 1n);
+
+      expect(await token.balanceOf(await addr1.getAddress())).to.be.equal(
+        balanceAdmin / 2n + 1n
+      );
+      await token
+        .connect(addr1)
+        .onboardParticipant(
+          await factory.getAddress(),
+          uint256(100),
+          await addr1.getAddress(),
+          "ADMIN SECRET"
+        );
+    });
 
     describe("NOT WORKS", function () {
-      it("Should revert if caller is not the owner");
-      it("Should revert if caller is not the admin");
+      it("Should revert if caller is not the owner", async function () {
+        await expect(
+          token
+            .connect(randomAddr)
+            .onboardParticipant(
+              await factory.getAddress(),
+              uint256(100),
+              await addr1.getAddress(),
+              "ADMIN SECRET"
+            )
+        ).to.be.revertedWith(ERRORS.onlyAdmin);
+      });
+      it("Should revert if caller is not the admin", async function () {
+        let balanceAdmin = await token.balanceOf(await owner.getAddress());
+        await token.transfer(await addr1.getAddress(), balanceAdmin / 2n + 1n);
+
+        expect(await token.balanceOf(await owner.getAddress())).to.be.equal(
+          balanceAdmin / 2n - 1n
+        );
+
+        await expect(
+          token.onboardParticipant(
+            await factory.getAddress(),
+            uint256(100),
+            await addr1.getAddress(),
+            "ADMIN SECRET"
+          )
+        ).to.be.revertedWith(ERRORS.onlyAdmin);
+      });
     });
   });
   describe("Engage reputation", function () {

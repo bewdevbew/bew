@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-// Importing the ERC404 contract as the base and OpenZeppelin's Strings library for string operations
-// import "./ERC404.sol";
-// import "./ERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
 import "./interfaces/ITokenReputation.sol";
 import "./interfaces/ITokenReputationFactory.sol";
 import {DataTypes} from "./libraries/DataTypes.sol";
-// My404 contract inherits ERC404 to create a custom token with both ERC-20 and ERC-721 features
+
 contract TokenReputation is ERC20, Ownable {
-    // Public variables to store URIs for token metadata
     event NewTokenOnboarded(
         address indexed token,
         address indexed to,
@@ -21,12 +17,13 @@ contract TokenReputation is ERC20, Ownable {
     );
     string public dataURI;
     string public baseTokenURI;
-    uint256 public tokensLegacy;
+    uint256 public legacyLength;
     address public source;
     DataTypes.AdminRules public rules;
     using Strings for uint256;
 
     mapping(address => uint256) public poolTokensForGovernance;
+    mapping(address => uint256) public poolTokensReputation;
     mapping(address => uint256) public poolTokensForSponsor;
     mapping(address => DataTypes.AdminRules) public particularRules;
     mapping(address => bool) public isBanned;
@@ -55,7 +52,7 @@ contract TokenReputation is ERC20, Ownable {
         if (_token == address(this)) {
             balance = balanceOf(msg.sender);
         } else {
-            balance = poolTokensForSponsor[msg.sender];
+            balance = poolTokensReputation[msg.sender];
         }
         require(balance > _value, "Not enough tokens to access this function");
         _;
@@ -95,48 +92,48 @@ contract TokenReputation is ERC20, Ownable {
     function onboardParticipant(
         address _factory,
         uint256 _amount,
-        address _sponsored,
+        address _for,
         string calldata _name
     ) public onlyAdminOf(address(this)) returns (address) {
         DataTypes.AdminRules memory _rules;
-        if (particularRules[_sponsored].customRules) {
-            _rules = particularRules[_sponsored];
+        if (particularRules[_for].customRules) {
+            _rules = particularRules[_for];
         } else {
             _rules = rules;
         }
         uint participationRateTokens = (_amount *
             _rules.adminLegacyFeePercentage) / 100;
-        transfer(_sponsored, participationRateTokens);
+        transfer(_for, participationRateTokens);
 
         address newToken = ITokenReputationFactory(_factory).mint(
-            _sponsored,
+            _for,
             _name,
             _amount,
             _rules
         );
 
         // TODO Participer au nouveau token
-        if (isBanned[_sponsored]) {
-            isBanned[_sponsored] = false;
+        if (isBanned[_for]) {
+            isBanned[_for] = false;
         }
-        tokensLegacy += 1;
-        emit NewTokenOnboarded(address(newToken), _sponsored, _amount);
+        legacyLength += 1;
+        emit NewTokenOnboarded(address(newToken), _for, _amount);
         return newToken;
     }
 
     function engageReputation(uint256 _amount, address _token) public {
         ITokenReputation token = ITokenReputation(_token);
 
-        if (!isBanned[_token] || token.poolTokensForSponsor(msg.sender) > 0) {
+        if (!isBanned[_token] || token.poolTokensReputation(msg.sender) > 0) {
             _engageReputation(_amount, msg.sender, token);
         }
     }
 
     function findRules(
-        address _sponsored
+        address _for
     ) public view returns (DataTypes.AdminRules memory) {
-        if (particularRules[_sponsored].customRules) {
-            return particularRules[_sponsored];
+        if (particularRules[_for].customRules) {
+            return particularRules[_for];
         } else {
             return rules;
         }
@@ -144,17 +141,19 @@ contract TokenReputation is ERC20, Ownable {
 
     function _engageReputation(
         uint256 _amount,
-        address _sponsored,
+        address _for,
         ITokenReputation iToken
-    ) internal onlySponsorFor(address(iToken), _amount) {
-        bool isAllowed;
-
+    )
+        internal
+        onlySponsorFor(address(iToken), _amount)
+        returns (bool isAllowed)
+    {
         DataTypes.AdminRules memory _rules = findRules(address(iToken));
 
-        uint256 participationReciprocalRate = iToken.poolTokensForSponsor(
+        uint256 participationReciprocalRate = iToken.poolTokensReputation(
             source
         );
-        uint256 checkSponsoredBalance = iToken.balanceOf(_sponsored);
+        uint256 checkSponsoredBalance = iToken.balanceOf(_for);
         require(
             _rules.sponsorTokenRequirement < checkSponsoredBalance,
             "Not enough tokens to access this function"
@@ -162,16 +161,19 @@ contract TokenReputation is ERC20, Ownable {
         if (checkSponsoredBalance > 0) {
             iToken.revokeParticipation(checkSponsoredBalance, address(this));
 
-            if (
-                checkSponsoredBalance == iToken.balanceOf(_sponsored) - _amount
-            ) {
+            if (checkSponsoredBalance == iToken.balanceOf(_for) - _amount) {
                 iToken.engageReputation(checkSponsoredBalance, address(iToken));
             }
             isAllowed = true;
+        } else if (poolTokensReputation[_for] > 0) {
+            isAllowed = true;
         }
 
-        poolTokensForSponsor[_sponsored] += _amount;
-        transfer(_sponsored, _amount);
+        if (isAllowed) {
+            iToken.engageReputation(_amount, address(iToken));
+            poolTokensReputation[_for] += _amount;
+            transfer(_for, _amount);
+        }
     }
 
     function revokeParticipation(
@@ -180,7 +182,7 @@ contract TokenReputation is ERC20, Ownable {
     ) public onlyAdminOf(_token) {
         DataTypes.AdminRules memory _rules;
         require(
-            poolTokensForSponsor[_token] >= _amount,
+            poolTokensReputation[_token] >= _amount,
             "Not enough tokens to access this function"
         );
 
@@ -191,7 +193,7 @@ contract TokenReputation is ERC20, Ownable {
         }
         uint256 feeAmount = (_amount * _rules.adminRevokeFeePercentage) / 100;
         uint256 netAmount = _amount - feeAmount;
-        poolTokensForSponsor[_token] -= _amount;
+        poolTokensReputation[_token] -= _amount;
         transfer(msg.sender, netAmount);
     }
 
