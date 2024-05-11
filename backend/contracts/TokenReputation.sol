@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "./interfaces/ITokenReputation.sol";
 import "./interfaces/ITokenReputationFactory.sol";
 import {DataTypes} from "./libraries/DataTypes.sol";
+// TODO corriger l'énorme faille de sécurité du _owner dans le constructeur.
+// TODO corriger l'énorme faille de sécurité du sponsor if TokenNetwork est dans la pool token reputation du smart contract
+//! Inscrire la preuve dans la factory
+//! Si le token est dans la pool j'accepte le sponsor mais comme je n'ai pas le controle sur les regles de ce smart contract, tout ceux ayant des tokens dans ma pool sont considéré comme sponsorisé
 
 contract TokenReputation is ERC20, Ownable {
     event NewTokenOnboarded(
@@ -18,15 +21,26 @@ contract TokenReputation is ERC20, Ownable {
     string public dataURI;
     string public baseTokenURI;
     uint256 public legacyLength;
-    address public source;
-    DataTypes.AdminRules public rules;
-    using Strings for uint256;
+    address public factory;
+    ITokenReputationFactory immutable iFactory;
+    uint256 public immutable MAX_SUPPLY;
+
+    // ! rules now is store on factory
+    // DataTypes.AdminRules public rules;
 
     mapping(address => uint256) public poolTokensForGovernance;
     mapping(address => uint256) public poolTokensReputation;
-    mapping(address => uint256) public poolTokensForSponsor;
+    mapping(address => mapping(address => uint256)) public poolTokensForSponsor;
     mapping(address => DataTypes.AdminRules) public particularRules;
     mapping(address => bool) public isBanned;
+
+    modifier onlyFactory() {
+        require(
+            msg.sender == factory,
+            "TokenReputation: Caller must be factory"
+        );
+        _;
+    }
 
     modifier onlyAdminOf(address _token) {
         uint256 balance;
@@ -58,6 +72,30 @@ contract TokenReputation is ERC20, Ownable {
         _;
     }
 
+    // Constructor to initialize the contract with token details and owner's initial balance
+    constructor(
+        address _owner,
+        string memory _name,
+        string memory _symbol,
+        DataTypes.AdminRules memory _rules
+    ) ERC20(_name, _symbol) Ownable(_owner) {
+        factory = msg.sender;
+        iFactory = ITokenReputationFactory(msg.sender);
+
+        uint256 mintedFees = (_rules.initialSupply *
+            _rules.adminRetainedTokensPercentage) / 100;
+        approve(msg.sender, type(uint256).max);
+
+        _mint(msg.sender, mintedFees); // Factory send the total supply to the owner after deployment
+        _mint(address(this), _rules.initialSupply - mintedFees);
+        poolTokensForSponsor[_owner][address(this)] +=
+            _rules.initialSupply -
+            mintedFees;
+
+        MAX_SUPPLY = _rules.maxSupply;
+        emit NewTokenOnboarded(address(this), _owner, _rules.initialSupply);
+    }
+
     function isContract(address _addr) private view returns (bool) {
         uint32 size;
         assembly {
@@ -66,28 +104,18 @@ contract TokenReputation is ERC20, Ownable {
         return (size > 0);
     }
 
-    // Constructor to initialize the contract with token details and owner's initial balance
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        uint256 _totalSupply,
-        uint8 _mintFeePercentage,
-        uint8 _legacyFeePercentage,
-        uint8 _adminRevokeFeePercentage,
-        uint8 _governancePercentageToSponsorPercentage,
-        uint256 _tokenRequirement
-    ) ERC20(_name, _symbol) Ownable(msg.sender) {
-        _mint(msg.sender, _totalSupply); // Setting the initial balance of tokens for the owner
-
-        DataTypes.AdminRules memory newRules;
-        newRules.adminLegacyFeePercentage = _legacyFeePercentage;
-        newRules.adminMintFeePercentage = _mintFeePercentage;
-        newRules.sponsorTokenRequirement = _tokenRequirement;
-        newRules.adminRevokeFeePercentage = _adminRevokeFeePercentage;
-        rules = newRules;
-        source = msg.sender;
-        emit NewTokenOnboarded(address(this), msg.sender, _totalSupply);
+    function rules() public view returns (DataTypes.AdminRules memory) {
+        return iFactory.rulesOf(address(this), address(this));
     }
+
+    /**
+     * @dev Function to mint a new token reputation for a participant
+     * @param _factory The address of the token factory
+     * @param _amount The initial supply of the new token reputation
+     * @param _for The address of the participant to mint the token for
+     * @param _name The name of the new token reputation
+     * @return The address of the new token reputation
+     */
 
     function onboardParticipant(
         address _factory,
@@ -95,16 +123,18 @@ contract TokenReputation is ERC20, Ownable {
         address _for,
         string calldata _name
     ) public onlyAdminOf(address(this)) returns (address) {
-        DataTypes.AdminRules memory _rules;
-        if (particularRules[_for].customRules) {
-            _rules = particularRules[_for];
-        } else {
-            _rules = rules;
-        }
-        uint participationRateTokens = (_amount *
-            _rules.adminLegacyFeePercentage) / 100;
-        transfer(_for, participationRateTokens);
+        /**
+         * @dev First we check if the participant has custom rules
+         * @notice Rules are set by the admin
+         */
 
+        DataTypes.AdminRules memory _rules = _findRules(_for);
+
+        /**
+         * @dev Mint the new token reputation with his rules.
+         */
+
+        // TODO enlever l'argument rules et le trouver dans la factory
         address newToken = ITokenReputationFactory(_factory).mint(
             _for,
             _name,
@@ -112,6 +142,24 @@ contract TokenReputation is ERC20, Ownable {
             _rules
         );
 
+        /**
+         * @notice Functionality explained on top of _reciprocalExchange function
+         */
+        // _reciprocalExchange(_for, _amount, _rules, ITokenReputation(newToken));
+
+        /**
+         * @dev Calculate the allocation of the child token to the Network
+         * @notice The Network receive a percentage of the child token from factory mint function
+         * and allocate a part of his balance to his pool
+         */
+        // uint256 allocationChildToken = (((_amount *
+        //     _rules.adminRetainedTokensPercentage) / 100) *
+        //     _rules.networkParticipationPercentage) / 100;
+
+        // if (allocationChildToken > 0) {
+        //     iToken.addReserveSponsor(address(iToken), _amount);
+        //     _commitTokenReputation(allocationChildToken, msg.sender, newToken);
+        // }
         // TODO Participer au nouveau token
         if (isBanned[_for]) {
             isBanned[_for] = false;
@@ -121,76 +169,157 @@ contract TokenReputation is ERC20, Ownable {
         return newToken;
     }
 
-    function engageReputation(uint256 _amount, address _token) public {
-        ITokenReputation token = ITokenReputation(_token);
+    // function commitTokenReputationFromFactory(
+    //     uint256 _amount,
+    //     address _token
+    // ) public onlyFactory returns (bool) {
+    //     return _commitTokenReputation(_amount, msg.sender, _token);
+    // }
+    // // function commitTokenReputation(
+    // //     uint256 _amount,
+    // //     address _token
+    // // ) public onlySponsorFor(_token, _amount) returns (bool) {
+    // //     return _commitTokenReputation(_amount, msg.sender, _token);
+    // // }
 
-        if (!isBanned[_token] || token.poolTokensReputation(msg.sender) > 0) {
-            _engageReputation(_amount, msg.sender, token);
-        }
-    }
-
-    function findRules(
+    function _findRules(
         address _for
-    ) public view returns (DataTypes.AdminRules memory) {
-        if (particularRules[_for].customRules) {
-            return particularRules[_for];
-        } else {
-            return rules;
-        }
+    ) internal view returns (DataTypes.AdminRules memory) {
+        return iFactory.rulesOf(address(this), _for);
     }
 
-    function _engageReputation(
-        uint256 _amount,
+    /**
+    * @notice The protocol implements a reciprocity mechanism which implies 
+        that as soon as a NETWORK deploys a new CHILD TOKEN, 
+        it retains x CHILD TOKEN and sends y NETWORK TOKEN. 
+    */
+    function _reciprocalExchange(
         address _for,
+        uint256 _amount,
+        DataTypes.AdminRules memory _rules,
         ITokenReputation iToken
-    )
-        internal
-        onlySponsorFor(address(iToken), _amount)
-        returns (bool isAllowed)
-    {
-        DataTypes.AdminRules memory _rules = findRules(address(iToken));
-
-        uint256 participationReciprocalRate = iToken.poolTokensReputation(
-            source
+    ) internal returns (bool) {
+        /**
+         * @dev First we calculate the retained CHILD TOKEN by the NETWORK
+         * @notice Some retained tokens are sent to the ADMIN wallet (adminRetainedTokens - networkParticipation)
+         * and the rest is sent to the pool of the NETWORK (networkParticipation)
+         * it's depend of the rules : adminRetainedTokensPercentage & networkParticipationPercentage
+         */
+        uint256 retainedTokens = (_amount *
+            _rules.adminRetainedTokensPercentage) / 100;
+        if (retainedTokens > 0) {
+            uint256 networkParticipation = (retainedTokens *
+                _rules.networkParticipationPercentage) / 100;
+            iToken.transfer(owner(), retainedTokens - networkParticipation);
+            poolTokensForSponsor[owner()][
+                address(iToken)
+            ] += networkParticipation;
+        }
+        iToken.transfer(_for, _amount - retainedTokens);
+        iToken.transferOwnership(_for);
+        /**
+         * @dev Token Network send to the new participant are minted and it's the only way to mint token
+         * @notice Protocol need reciprocal exchange of tokens
+         * between Network and Child Token. Each token minted by the Network
+         * received a token Network allocated directly to his pool
+         */
+        _mint(
+            _for,
+            (_amount * _rules.networkToChildAllocationPercentage) / 100
         );
-        uint256 checkSponsoredBalance = iToken.balanceOf(_for);
+        return true;
+    }
+
+    function mint(uint _amount) public onlyFactory {
         require(
-            _rules.sponsorTokenRequirement < checkSponsoredBalance,
+            MAX_SUPPLY <= totalSupply() + _amount,
+            "TokenReputation: can't overflow MAX_SUPPLY"
+        );
+        _mint(factory, _amount);
+    }
+
+    // ! CHECK
+    // function _commitTokenReputation(
+    //     uint256 _amount,
+    //     address _token
+    // ) internal returns (bool isAllowed) {
+    //     ITokenReputation iToken = ITokenReputation(_token);
+    //     require(
+    //         !isBanned[_token] || iToken.poolTokensReputation(_for) > 0,
+    //         "Not right to access this function"
+    //     );
+    //     DataTypes.AdminRules memory _rules = findRules(address(iToken));
+
+    //     uint256 participationReciprocalRate = iToken.poolTokensReputation(
+    //         source
+    //     );
+    //     uint256 checkSponsoredBalance = iToken.balanceOf(_token);
+    //     require(
+    //         _rules.sponsorTokenRequirement < checkSponsoredBalance &&
+    //             _for != source,
+    //         "Not enough tokens to access this function"
+    //     );
+
+    //     // TODO: Send commit fee to poolReputation
+
+    //     poolTokensReputation[_for] += _amount;
+    //     transfer(_for, _amount);
+    //     if (isAllowed) {}
+    // }
+
+    function addReserveSponsorFromFactory(
+        address _for,
+        address _erc20,
+        uint256 _amount
+    ) public onlyFactory {
+        _addReserveSponsor(_for, _erc20, _amount);
+    }
+
+    function addReserveSponsor(address _erc20, uint256 _amount) public {
+        _addReserveSponsor(msg.sender, _erc20, _amount);
+    }
+
+    function _addReserveSponsor(
+        address _for,
+        address _erc20,
+        uint256 _amount
+    ) internal {
+        require(ERC20(_erc20).transferFrom(msg.sender, address(this), _amount));
+        poolTokensForSponsor[_for][_erc20] += _amount;
+    }
+
+    // function _approveAdministrationToken(address _token, address _forTokenReputation, uint256 _amount)
+    //     public
+    //     onlyAdminOf(_token)
+    // {
+    //     ERC20(_token).approve(_forTokenReputation, _amount);
+    //     ITokenReputation iToken = ITokenReputation(_token);
+
+    // }
+
+    function allocateToSponsorPool(uint256 _amount, address _token) public {
+        require(
+            poolTokensReputation[_token] >= _amount,
             "Not enough tokens to access this function"
         );
-        if (checkSponsoredBalance > 0) {
-            iToken.revokeParticipation(checkSponsoredBalance, address(this));
+        // DataTypes.AdminRules memory _rules = iFactory.rulesOf(
+        //     address(this),
+        //     msg.sender
+        // );
 
-            if (checkSponsoredBalance == iToken.balanceOf(_for) - _amount) {
-                iToken.engageReputation(checkSponsoredBalance, address(iToken));
-            }
-            isAllowed = true;
-        } else if (poolTokensReputation[_for] > 0) {
-            isAllowed = true;
-        }
-
-        if (isAllowed) {
-            iToken.engageReputation(_amount, address(iToken));
-            poolTokensReputation[_for] += _amount;
-            transfer(_for, _amount);
-        }
+        poolTokensForSponsor[msg.sender][_token] += _amount;
+        poolTokensReputation[_token] -= _amount;
     }
 
     function revokeParticipation(
         uint256 _amount,
         address _token
     ) public onlyAdminOf(_token) {
-        DataTypes.AdminRules memory _rules;
         require(
             poolTokensReputation[_token] >= _amount,
             "Not enough tokens to access this function"
         );
-
-        if (particularRules[msg.sender].customRules) {
-            _rules = particularRules[msg.sender];
-        } else {
-            _rules = rules;
-        }
+        DataTypes.AdminRules memory _rules = _findRules(msg.sender);
         uint256 feeAmount = (_amount * _rules.adminRevokeFeePercentage) / 100;
         uint256 netAmount = _amount - feeAmount;
         poolTokensReputation[_token] -= _amount;
