@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 library ProtocolConfiguration {
     uint256 public constant INITIAL_SUPPLY =                            1000000 * 10 ** 18; // prettier-ignore
+    uint256 public constant INITIAL_CHILD_SUPPLY =                      1000 * 10 ** 18; // prettier-ignore
     uint256 public constant SPONSOR_TOKEN_REQUIREMENT =                 200 * 10 ** 18; // prettier-ignore
     uint8 public constant ADMIN_RETAINED_TOKENS_PERCENTAGE =            5; // prettier-ignore
     uint8 public constant NETWORK_PARTICIPATION_PERCENTAGE =            30; // prettier-ignore

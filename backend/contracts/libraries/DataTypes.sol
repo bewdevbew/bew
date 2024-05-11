@@ -28,6 +28,7 @@ library DataTypes {
         bool customRules;
         uint256 initialSupply;
         uint256 maxSupply;
+        uint256 initialChildSupply;
         uint256 sponsorTokenRequirement; // Nombre de tokens engagé du Network dans un autre Network pour que celui ci accéde à l'interface ERC721
         uint8 adminRetainedTokensPercentage; // 100% Echange 1 token Network vs 1 token Child1n
         uint8 networkParticipationPercentage; // 100% Engage tout les token Child1n dans le Network au moment du mint // ! Recommandé max 90%

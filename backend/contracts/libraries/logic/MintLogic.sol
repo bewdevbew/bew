@@ -13,6 +13,12 @@ library MintLogic {
             "MintLogic: Initial supply must be lower than 50% of MAX_SUPPLY"
         );
         require(
+            _rules.initialChildSupply <=
+                ProtocolConfiguration.MAX_INITIAL_SUPPLY,
+            "MintLogic: Initial child supply must be lower than MAX_INITIAL_SUPPLY"
+        );
+
+        require(
             _rules.adminRetainedTokensPercentage <=
                 ProtocolConfiguration.MAX_ADMIN_RETAINED_TOKENS_PERCENTAGE,
             "MintLogic: Admin retained tokens percentage must be less than max admin retained tokens percentage"

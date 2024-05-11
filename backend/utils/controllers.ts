@@ -9,27 +9,26 @@ export const onboardParticipant = async ({
   childSupply = "100",
   participant,
   token,
-  factory,
   name = "ADMIN SECRET",
   caller,
+  symbol = "A0DAY",
 }: {
   name?: string;
   caller?: Signer;
   token: TokenReputation;
-  factory: TokenReputationFactory;
+  symbol?: string;
   childSupply?: `${number}`;
   participant: `0x${string}`;
 }) => {
   let tx = await token
     .connect(caller)
     .onboardParticipant(
-      await factory.getAddress(),
       ethers.parseEther(childSupply),
       participant,
-      name
+      name,
+      symbol
     );
 
-  return;
   const receipt = await tx.wait();
   const filter = token.filters.NewTokenOnboarded();
   const events = await token.queryFilter(

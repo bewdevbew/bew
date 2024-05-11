@@ -5,12 +5,14 @@ import {DataTypes} from "../libraries/DataTypes.sol";
 interface ITokenReputationFactory {
     function adminOf(address _token) external view returns (address);
     function tokenOf(address _admin) external view returns (address);
+
     function mint(
         address _sponsored,
+        uint256 _amount,
         string memory _name,
-        uint256 _initialSupply,
-        DataTypes.AdminRules memory _rules
+        string memory _symbol
     ) external returns (address);
+
     function childTokenToNetworkTokens(
         address _childToken
     ) external view returns (address);

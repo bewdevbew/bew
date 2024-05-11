@@ -43,19 +43,10 @@ contract TokenReputation is ERC20, Ownable {
     }
 
     modifier onlyAdminOf(address _token) {
-        uint256 balance;
-        uint256 supply;
-        if (_token == address(this)) {
-            balance = balanceOf(msg.sender);
-            supply = totalSupply();
-        } else {
-            ERC20 token = ERC20(_token);
-            balance = token.balanceOf(msg.sender);
-            supply = token.totalSupply();
-        }
+        // TODO Faire une fonction dans la factory pour révoquer l'admin si balanceOf(caller) a > totalSupply/2
         require(
-            balance >= supply / 2,
-            "You must own at least 50% of the token supply to be able to call this function"
+            iFactory.adminOf(_token) == msg.sender,
+            "TokenReputation: Caller must be admin of the token"
         );
         _;
     }
@@ -84,11 +75,12 @@ contract TokenReputation is ERC20, Ownable {
 
         uint256 mintedFees = (_rules.initialSupply *
             _rules.adminRetainedTokensPercentage) / 100;
-        approve(msg.sender, type(uint256).max);
+        approve(msg.sender, _rules.maxSupply);
+        // approve(address(this), _rules.maxSupply);
 
         _mint(msg.sender, mintedFees); // Factory send the total supply to the owner after deployment
         _mint(address(this), _rules.initialSupply - mintedFees);
-        poolTokensForSponsor[_owner][address(this)] +=
+        poolTokensReputation[address(this)] +=
             _rules.initialSupply -
             mintedFees;
 
@@ -110,37 +102,30 @@ contract TokenReputation is ERC20, Ownable {
 
     /**
      * @dev Function to mint a new token reputation for a participant
-     * @param _factory The address of the token factory
      * @param _amount The initial supply of the new token reputation
      * @param _for The address of the participant to mint the token for
      * @param _name The name of the new token reputation
+     * @param _symbol The symbol of the new token reputation
      * @return The address of the new token reputation
      */
 
     function onboardParticipant(
-        address _factory,
         uint256 _amount,
         address _for,
-        string calldata _name
+        string calldata _name,
+        string calldata _symbol
     ) public onlyAdminOf(address(this)) returns (address) {
         /**
          * @dev First we check if the participant has custom rules
          * @notice Rules are set by the admin
          */
 
-        DataTypes.AdminRules memory _rules = _findRules(_for);
-
         /**
          * @dev Mint the new token reputation with his rules.
          */
 
         // TODO enlever l'argument rules et le trouver dans la factory
-        address newToken = ITokenReputationFactory(_factory).mint(
-            _for,
-            _name,
-            _amount,
-            _rules
-        );
+        address newToken = iFactory.mint(_for, _amount, _name, _symbol);
 
         /**
          * @notice Functionality explained on top of _reciprocalExchange function
@@ -232,7 +217,7 @@ contract TokenReputation is ERC20, Ownable {
 
     function mint(uint _amount) public onlyFactory {
         require(
-            MAX_SUPPLY <= totalSupply() + _amount,
+            MAX_SUPPLY >= totalSupply() + _amount,
             "TokenReputation: can't overflow MAX_SUPPLY"
         );
         _mint(factory, _amount);
@@ -284,7 +269,7 @@ contract TokenReputation is ERC20, Ownable {
         address _erc20,
         uint256 _amount
     ) internal {
-        require(ERC20(_erc20).transferFrom(msg.sender, address(this), _amount));
+        require(ERC20(_erc20).transferFrom(factory, address(this), _amount));
         poolTokensForSponsor[_for][_erc20] += _amount;
     }
 

@@ -2,14 +2,14 @@ import { ethers } from "hardhat";
 
 export const MOOCKS = {
   erc20: {
-    name: "ZERODAY",
+    name: "ZeroDay",
     symbol: "0DAY",
-    totalSupply: ethers.parseEther("200000000"),
   },
 
   rules: {
     customRules: false,
     initialSupply: 1000000n * 10n ** 18n,
+    initialChildSupply: 1000n * 10n ** 18n,
     maxSupply: 21000000n * 10n ** 18n,
     adminRetainedTokensPercentage: 5,
     networkParticipationPercentage: 30,

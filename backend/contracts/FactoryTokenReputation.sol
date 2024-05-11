@@ -19,6 +19,7 @@ contract TokenReputationFactory is Ownable {
         DataTypes.AdminRules({
             customRules: false,
             initialSupply: ProtocolConfiguration.INITIAL_SUPPLY,
+            initialChildSupply: ProtocolConfiguration.INITIAL_CHILD_SUPPLY,
             maxSupply: ProtocolConfiguration.MAX_SUPPLY,
             adminRetainedTokensPercentage: ProtocolConfiguration
                 .ADMIN_RETAINED_TOKENS_PERCENTAGE,
@@ -86,9 +87,9 @@ contract TokenReputationFactory is Ownable {
         }
     }
 
-    // TODO je m'emboube entre network rules et child rules dans les différents contrat. Bien vérifier si la logique appliqué est la bonne
     function mint(
         address _sponsored,
+        uint256 _amount,
         string memory _name,
         string memory _symbol
     ) public returns (address) {
@@ -102,6 +103,13 @@ contract TokenReputationFactory is Ownable {
             msg.sender,
             _sponsored
         );
+        if (
+            _amount != childRules.initialSupply &&
+            _amount <= childRules.maxSupply
+        ) {
+            childRules.initialSupply = _amount;
+        }
+
         DataTypes.AdminRules memory networkRules = particularRules[msg.sender][
             msg.sender
         ];
@@ -116,33 +124,46 @@ contract TokenReputationFactory is Ownable {
         );
         uint256 tokensRetainedByAdmin = childToken.balanceOf(address(this));
 
+        uint256 networkAllocationToChild = (childRules.initialSupply *
+            networkRules.networkToChildAllocationPercentage) / 100;
         // Network mine ses tokens et l'envoie à l'enfant pour engager sa réputation
-        networkToken.mint(
-            (childRules.initialSupply *
-                networkRules.networkToChildAllocationPercentage) / 100
-        );
+        networkToken.mint(networkAllocationToChild);
 
         if (tokensRetainedByAdmin > 0) {
             uint256 networkParticipation = (tokensRetainedByAdmin *
                 networkRules.networkParticipationPercentage) / 100;
+
             // Token really owned by owner
             childToken.transfer(
-                owner(),
+                adminOf[msg.sender],
                 tokensRetainedByAdmin - networkParticipation
             );
             // TODO override addReserveSponsorFromFactory
             // Token locked on protocol. Only Network Admin and Token Admin can access
+            // require(
+            //     networkToken.transferFrom(
+            //         address(this),
+            //         address(childToken),
+            //         networkParticipation
+            //     ),
+            //     "TokenReputationFactory: Transfer failed"
+            // );
+
+            childToken.approve(address(networkToken), networkParticipation);
             networkToken.addReserveSponsorFromFactory(
-                adminOf[msg.sender],
+                address(networkToken),
                 address(childToken),
                 networkParticipation
             );
+
+            networkToken.approve(address(childToken), networkAllocationToChild);
             childToken.addReserveSponsorFromFactory(
-                adminOf[address(networkToken)],
+                address(childToken),
                 address(networkToken),
-                childRules.initialSupply - tokensRetainedByAdmin
+                networkAllocationToChild
             );
         }
+        return address(childToken);
     }
 
     function addParticularRules(
@@ -185,6 +206,8 @@ contract TokenReputationFactory is Ownable {
             _rules
         );
         address tokenAddress = address(newToken);
+        address networkAddress;
+
         childTokenToNetworkTokens[tokenAddress] = tokensLength == 0
             ? address(this)
             : msg.sender;
@@ -193,7 +216,6 @@ contract TokenReputationFactory is Ownable {
         adminOf[tokenAddress] = _owner;
         tokenOf[_owner] = tokenAddress;
 
-        childTokenToNetworkTokens[tokenAddress] = _owner;
         // Rules are indexed in own address
         particularRules[tokenAddress][tokenAddress] = _rules;
         tokensLength += 1; // TODO check if need openzeppelin counter with latest sol version
