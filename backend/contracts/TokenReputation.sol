@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/ITokenReputation.sol";
 import "./interfaces/ITokenReputationFactory.sol";
 import {DataTypes} from "./libraries/DataTypes.sol";
+import {Errors} from "./libraries/helpers/Errors.sol";
 // TODO corriger l'énorme faille de sécurité du _owner dans le constructeur.
 // TODO corriger l'énorme faille de sécurité du sponsor if TokenNetwork est dans la pool token reputation du smart contract
 //! Inscrire la preuve dans la factory
@@ -35,10 +36,7 @@ contract TokenReputation is ERC20, Ownable {
     mapping(address => bool) public isBanned;
 
     modifier onlyFactory() {
-        require(
-            msg.sender == factory,
-            "TokenReputation: Caller must be factory"
-        );
+        require(msg.sender == factory, Errors.CALLER_NOT_FACTORY);
         _;
     }
 
@@ -46,7 +44,7 @@ contract TokenReputation is ERC20, Ownable {
         // TODO Faire une fonction dans la factory pour révoquer l'admin si balanceOf(caller) a > totalSupply/2
         require(
             iFactory.adminOf(_token) == msg.sender,
-            "TokenReputation: Caller must be admin of the token"
+            Errors.CALLER_NOT_ADMIN
         );
         _;
     }
@@ -59,7 +57,7 @@ contract TokenReputation is ERC20, Ownable {
         } else {
             balance = poolTokensReputation[msg.sender];
         }
-        require(balance > _value, "Not enough tokens to access this function");
+        require(balance > _value, Errors.INSUFFICIENT_BALANCE);
         _;
     }
 
@@ -102,7 +100,6 @@ contract TokenReputation is ERC20, Ownable {
 
     /**
      * @dev Function to mint a new token reputation for a participant
-     * @param _amount The initial supply of the new token reputation
      * @param _for The address of the participant to mint the token for
      * @param _name The name of the new token reputation
      * @param _symbol The symbol of the new token reputation
@@ -110,17 +107,53 @@ contract TokenReputation is ERC20, Ownable {
      */
 
     function onboardParticipant(
-        uint256 _amount,
         address _for,
         string calldata _name,
         string calldata _symbol
     ) public onlyAdminOf(address(this)) returns (address) {
-        address newToken = iFactory.mint(_for, _amount, _name, _symbol);
-        if (isBanned[_for]) {
-            isBanned[_for] = false;
-        }
+        return _onboardParticipant(_for, _name, _symbol);
+    }
+
+    /**
+     * @dev Function to mint a new token reputation for a participant
+     * @param _for The address of the participant to mint the token for
+     * @param _name The name of the new token reputation
+     * @param _symbol The symbol of the new token reputation
+     * @return The address of the new token reputation
+     */
+
+    function onboardCustomParticipant(
+        address _for,
+        uint256 _initialSupply,
+        uint256 _maxSupply,
+        string calldata _name,
+        string calldata _symbol
+    ) public onlyAdminOf(address(this)) returns (address) {
+        DataTypes.AdminRules memory _rules = iFactory.rulesOf(
+            address(this),
+            _for
+        );
+
+        _rules.initialSupply = _initialSupply;
+        _rules.maxSupply = _maxSupply;
+
+        iFactory.setRules(_rules, _for);
+        return _onboardParticipant(_for, _name, _symbol);
+    }
+
+    function _onboardParticipant(
+        address _for,
+        string calldata _name,
+        string calldata _symbol
+    ) internal returns (address) {
+        address newToken = iFactory.mint(_for, _name, _symbol);
+        isBanned[_for] = false;
         legacyLength += 1;
-        emit NewTokenOnboarded(address(newToken), _for, _amount);
+        emit NewTokenOnboarded(
+            address(newToken),
+            _for,
+            iFactory.rulesOf(address(this), _for).initialSupply
+        );
         return newToken;
     }
 
@@ -146,7 +179,7 @@ contract TokenReputation is ERC20, Ownable {
     function mint(uint _amount) public onlyFactory {
         require(
             MAX_SUPPLY >= totalSupply() + _amount,
-            "TokenReputation: can't overflow MAX_SUPPLY"
+            Errors.OVERFLOW_MAX_SUPPLY
         );
         _mint(factory, _amount);
     }
@@ -160,11 +193,11 @@ contract TokenReputation is ERC20, Ownable {
             msg.sender == _sponsor ||
                 iFactory.adminOf(_erc20) == msg.sender ||
                 iFactory.adminOf(_sponsor) == msg.sender,
-            "TokenReputation: Caller must be sponsor or admin of the token"
+            Errors.CALLER_CANT_USE_FUNCTION
         );
         require(
             poolTokensForSponsor[_sponsor][_erc20] >= _amount,
-            "TokenReputation: Not enough tokens to access this function"
+            Errors.INSUFFICIENT_BALANCE
         );
         poolTokensForSponsor[_sponsor][_erc20] -= _amount;
         ERC20(_erc20).transfer(msg.sender, _amount);
@@ -216,7 +249,7 @@ contract TokenReputation is ERC20, Ownable {
         address _erc20,
         uint256 _amount
     ) internal {
-        require(_amount > 0, "TokenReputation: Amount must be greater than 0");
+        require(_amount > 0, Errors.AMOUNT_CANT_BE_ZERO);
         require(ERC20(_erc20).transferFrom(factory, address(this), _amount));
         poolTokensForSponsor[_for][_erc20] += _amount;
     }
@@ -227,16 +260,12 @@ contract TokenReputation is ERC20, Ownable {
      * @param _amount can be smaller than withdrawReputationFromFactory in case of admin fee
      */
     function depositReputation(uint256 _amount) public returns (bool) {
-        require(!isBanned[msg.sender], "TokenReputation: Caller is banned");
+        require(!isBanned[msg.sender], Errors.CALLER_IS_BANNED);
         require(
             iFactory.adminOf(msg.sender) != address(0),
-            "TokenReputation: Caller must be token"
+            Errors.CALLER_NOT_TOKEN
         );
-        require(_amount > 0, "TokenReputation: Amount must be greater than 0");
-        require(
-            msg.sender != address(this),
-            "TokenReputation: Can't deposit to itself with this function"
-        );
+        require(_amount > 0, Errors.AMOUNT_CANT_BE_ZERO);
         require(
             ERC20(msg.sender).transferFrom(msg.sender, address(this), _amount)
         );
@@ -255,14 +284,18 @@ contract TokenReputation is ERC20, Ownable {
         uint256 _amount
     ) public onlyFactory returns (uint256 netAmount) {
         require(
+            _toNewNetwork != address(this),
+            Errors.CALLER_USE_INVALID_ARGUMENT
+        );
+        require(
             poolTokensReputation[_token] >= _amount,
-            "TokenReputation: Not enough tokens to access this function"
+            Errors.INSUFFICIENT_BALANCE
         );
         require(
             poolTokensReputation[_toNewNetwork] > 0 ||
                 poolTokensForSponsor[_toNewNetwork][_token] > 0 ||
                 poolTokensForSponsor[address(this)][_toNewNetwork] > 0,
-            "TokenReputation: New network isn't allowed to receive tokens"
+            Errors.NETWORK_NOT_ALLOWED
         );
 
         address admin = iFactory.adminOf(_token);
@@ -293,12 +326,8 @@ contract TokenReputation is ERC20, Ownable {
     function allocateToSponsorPool(uint256 _amount, address _token) public {
         require(
             poolTokensReputation[_token] >= _amount,
-            "TokenReputation: Not enough tokens to access this function"
+            Errors.INSUFFICIENT_BALANCE
         );
-        // DataTypes.AdminRules memory _rules = iFactory.rulesOf(
-        //     address(this),
-        //     msg.sender
-        // );
 
         poolTokensForSponsor[msg.sender][_token] += _amount;
         poolTokensReputation[_token] -= _amount;
@@ -310,7 +339,7 @@ contract TokenReputation is ERC20, Ownable {
     ) public onlyAdminOf(_token) {
         require(
             poolTokensReputation[_token] >= _amount,
-            "Not enough tokens to access this function"
+            Errors.INSUFFICIENT_BALANCE
         );
         DataTypes.AdminRules memory _rules = _findRules(msg.sender);
         uint256 feeAmount = (_amount * _rules.adminRevokeFeePercentage) / 100;
