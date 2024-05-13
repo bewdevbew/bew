@@ -20,7 +20,7 @@ const deployContract = async () => {
 
 const getChildToken = async (address: `0x${string}`) => {
   const Token = await hre.ethers.getContractFactory("TokenReputation");
-  return Token.attach(address) as TokenReputation;
+  return Token.attach(address) as unknown as TokenReputation;
 };
 
 describe("TokenReputation", function () {
@@ -34,7 +34,7 @@ describe("TokenReputation", function () {
 
     let contracts = await deployContract();
     token = contracts.token;
-    factory = contracts.factory;
+    factory = contracts.factory as any;
   });
 
   let onboardParticipant = async ({
@@ -670,7 +670,7 @@ describe("TokenReputation", function () {
     });
   });
 
-  describe.only("Set Rules", function () {
+  describe("Set Rules", function () {
     it("Should set rules for address", async () => {
       let newRules = {
         customRules: true,

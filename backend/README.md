@@ -1,22 +1,22 @@
-# 0- Créer son environnement Hardhat
+# - Créer son environnement Hardhat
 
 Initialiser l'environnement Hardhat :
 `npx hardhat init`
 
-# 1- Installation des dépendances
+# - Installation des dépendances
 
 ```bash
 npm install
 npx hardhat compile
 ```
 
-# 2- Tester le contrat
+# - Tester les contrats
 
 ```bash
 npx hardhat test
 ```
 
-# 3- Déployer le contrat
+# - Déployer le contrat
 
 ```bash
 npx hardhat node # Lancer un noeud local
