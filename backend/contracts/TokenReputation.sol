@@ -157,19 +157,6 @@ contract TokenReputation is ERC20, Ownable {
         return newToken;
     }
 
-    // function commitTokenReputationFromFactory(
-    //     uint256 _amount,
-    //     address _token
-    // ) public onlyFactory returns (bool) {
-    //     return _commitTokenReputation(_amount, msg.sender, _token);
-    // }
-    // // function commitTokenReputation(
-    // //     uint256 _amount,
-    // //     address _token
-    // // ) public onlySponsorFor(_token, _amount) returns (bool) {
-    // //     return _commitTokenReputation(_amount, msg.sender, _token);
-    // // }
-
     function _findRules(
         address _for
     ) internal view returns (DataTypes.AdminRules memory) {
@@ -202,35 +189,6 @@ contract TokenReputation is ERC20, Ownable {
         poolTokensForSponsor[_sponsor][_erc20] -= _amount;
         ERC20(_erc20).transfer(msg.sender, _amount);
     }
-
-    // ! CHECK
-    // function _commitTokenReputation(
-    //     uint256 _amount,
-    //     address _token
-    // ) internal returns (bool isAllowed) {
-    //     ITokenReputation iToken = ITokenReputation(_token);
-    //     require(
-    //         !isBanned[_token] || iToken.poolTokensReputation(_for) > 0,
-    //         "Not right to access this function"
-    //     );
-    //     DataTypes.AdminRules memory _rules = findRules(address(iToken));
-
-    //     uint256 participationReciprocalRate = iToken.poolTokensReputation(
-    //         source
-    //     );
-    //     uint256 checkSponsoredBalance = iToken.balanceOf(_token);
-    //     require(
-    //         _rules.sponsorTokenRequirement < checkSponsoredBalance &&
-    //             _for != source,
-    //         "Not enough tokens to access this function"
-    //     );
-
-    //     // TODO: Send commit fee to poolReputation
-
-    //     poolTokensReputation[_for] += _amount;
-    //     transfer(_for, _amount);
-    //     if (isAllowed) {}
-    // }
 
     function addReserveSponsorFromFactory(
         address _for,
@@ -321,18 +279,6 @@ contract TokenReputation is ERC20, Ownable {
             iToken.transfer(iFactory.adminOf(address(this)), feeAmount);
     }
 
-    //TODO onlyFactory ?
-    // TODO delete ?
-    function allocateToSponsorPool(uint256 _amount, address _token) public {
-        require(
-            poolTokensReputation[_token] >= _amount,
-            Errors.INSUFFICIENT_BALANCE
-        );
-
-        poolTokensForSponsor[msg.sender][_token] += _amount;
-        poolTokensReputation[_token] -= _amount;
-    }
-
     function revokeParticipation(
         uint256 _amount,
         address _token
@@ -341,11 +287,15 @@ contract TokenReputation is ERC20, Ownable {
             poolTokensReputation[_token] >= _amount,
             Errors.INSUFFICIENT_BALANCE
         );
-        DataTypes.AdminRules memory _rules = _findRules(msg.sender);
+        DataTypes.AdminRules memory _rules = iFactory.rulesOf(
+            address(this),
+            _token
+        );
         uint256 feeAmount = (_amount * _rules.adminRevokeFeePercentage) / 100;
         uint256 netAmount = _amount - feeAmount;
         poolTokensReputation[_token] -= _amount;
         transfer(msg.sender, netAmount);
+        if (feeAmount > 0) transfer(iFactory.adminOf(address(this)), feeAmount);
     }
 
     // Function to set the data URI, which can be used for additional metadata (change as needed)

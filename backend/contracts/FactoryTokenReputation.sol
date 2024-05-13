@@ -123,10 +123,18 @@ contract TokenReputationFactory is Ownable {
         networkToken.mint(networkAllocationToChild);
 
         if (tokensRetainedByAdmin > 0) {
+            // ? Voir si appliquer les legacy fee à initialSupply ou à tokensRetainedByAdmin ?
+            tokensRetainedByAdmin = _distributeLegacyFee(
+                address(networkToken),
+                tokensRetainedByAdmin,
+                childToken
+            );
             uint256 networkParticipation = (tokensRetainedByAdmin *
                 networkRules.networkParticipationPercentage) / 100;
+            address parentNetwork = childTokenToNetworkTokens[
+                address(networkToken)
+            ];
 
-            // Token really owned by owner
             childToken.transfer(
                 adminOf[msg.sender],
                 tokensRetainedByAdmin - networkParticipation
@@ -157,6 +165,43 @@ contract TokenReputationFactory is Ownable {
             );
         }
         return address(childToken);
+    }
+
+    /**
+     * @notice Distribute legacy fee to all nested network
+     */
+    function _distributeLegacyFee(
+        address _network,
+        uint256 _tokenRetainedByAdmin,
+        TokenReputation _iChildToken
+    ) internal returns (uint256) {
+        address currentNetwork = _network;
+        uint256 remainingFee = _tokenRetainedByAdmin - 1; // 1 token is minimum token retained by admin
+        address childToken = address(_iChildToken);
+
+        while (
+            childTokenToNetworkTokens[currentNetwork] != address(0) &&
+            currentNetwork != address(this)
+        ) {
+            uint256 legacyPercentage = currentNetwork == address(this)
+                ? standardRules.adminLegacyFeePercentage
+                : particularRules[currentNetwork][childToken]
+                    .adminLegacyFeePercentage;
+            uint256 fee = (remainingFee * legacyPercentage) / 100;
+
+            remainingFee -= fee;
+
+            if (fee > 0) {
+                _iChildToken.transfer(
+                    currentNetwork == address(this)
+                        ? owner()
+                        : adminOf[msg.sender],
+                    fee
+                );
+            }
+            currentNetwork = childTokenToNetworkTokens[currentNetwork];
+        }
+        return remainingFee + 1; // Give back 1 token to _network
     }
 
     function _mint(
