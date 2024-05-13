@@ -16,6 +16,7 @@ interface ITokenReputationFactory {
     function childTokenToNetworkTokens(
         address _childToken
     ) external view returns (address);
+
     function rulesOf(
         address _network,
         address _for

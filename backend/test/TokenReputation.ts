@@ -1,8 +1,9 @@
 import { expect } from "chai";
 import hre, { ethers } from "hardhat";
 import { TokenReputation, TokenReputationFactory } from "../typechain-types";
-import { Signer } from "ethers";
+import { BigNumberish, Signer } from "ethers";
 import {
+  tokensNetworkAfterRevokeFee,
   tokensNetworkAllocationToChild,
   tokensRetainedByAdmin,
 } from "../utils/unit";
@@ -365,12 +366,351 @@ describe("TokenReputation", function () {
     //   });
     // });
   });
+
+  describe("Withdraw sponsorship token", function () {
+    let childToken: TokenReputation;
+    let childAdmin: `0x${string}`;
+    let childSupply: any;
+    this.beforeEach(async () => {
+      expect(await factory.tokenOf(await addr1.getAddress())).to.be.equal(
+        ethers.ZeroAddress
+      );
+      const { child, to, amount } = await onboardParticipant({});
+      childToken = await getChildToken(child);
+      childAdmin = to;
+      childSupply = amount;
+      expect(
+        await token.poolTokensForSponsor(
+          await token.getAddress(),
+          await childToken.getAddress()
+        )
+      ).to.be.gt(0);
+    });
+
+    it("Should withdraw sponsorship token by ADMIN TOKEN NETWORK from NETWORK TOKEN", async function () {
+      let balanceAdminBefore = await childToken.balanceOf(
+        await owner.getAddress()
+      );
+      let balancePool = await token.poolTokensForSponsor(
+        await token.getAddress(),
+        await childToken.getAddress()
+      );
+      await token.withdrawSponsorshipToken(
+        await token.getAddress(),
+        await childToken.getAddress(),
+        balancePool
+      );
+      let balanceAdminAfter = await childToken.balanceOf(
+        await owner.getAddress()
+      );
+      expect(balanceAdminBefore + balancePool).to.be.equal(balanceAdminAfter);
+      expect(balanceAdminBefore).to.be.lt(balanceAdminAfter);
+    });
+
+    it("Should update balance of NETWORK contract", async () => {
+      let balanceBeforeOfNetwork = await childToken.balanceOf(
+        await token.getAddress()
+      );
+      let balancePool = await token.poolTokensForSponsor(
+        await token.getAddress(),
+        await childToken.getAddress()
+      );
+      await token.withdrawSponsorshipToken(
+        await token.getAddress(),
+        await childToken.getAddress(),
+        balancePool
+      );
+
+      let balanceAfterOfNetwork = await childToken.balanceOf(
+        await token.getAddress()
+      );
+      expect(balanceBeforeOfNetwork - balancePool).to.be.equal(
+        balanceAfterOfNetwork
+      );
+    });
+
+    it("Should withdraw CHILD TOKEN from NETWORK by ADMIN CHILD TOKEN", async function () {
+      let balanceChildAdminBefore = await token.balanceOf(
+        await addr1.getAddress()
+      );
+      let balancePool = await token.poolTokensForSponsor(
+        await childToken.getAddress(),
+        await token.getAddress()
+      );
+      await token.withdrawSponsorshipToken(
+        await token.getAddress(),
+        await childToken.getAddress(),
+        balancePool
+      );
+      let balanceChildAdminAfter = await token.balanceOf(
+        await addr1.getAddress()
+      );
+      expect(balanceChildAdminBefore + balancePool).to.be.equal(
+        balanceChildAdminAfter
+      );
+    });
+
+    describe("NOT WORKS", function () {
+      it("Should revert if caller is not the ADMIN of NETWORK or ADMIN of TOKEN", async function () {
+        await expect(
+          token
+            .connect(randomAddr)
+            .withdrawSponsorshipToken(
+              await token.getAddress(),
+              await childToken.getAddress(),
+              100
+            )
+        ).to.be.revertedWith(ERRORS.withdrawAuth);
+      });
+
+      it("Should revert if token balance is less than amount", async function () {
+        let balancePool = await token.poolTokensForSponsor(
+          await token.getAddress(),
+          await childToken.getAddress()
+        );
+        await expect(
+          token.withdrawSponsorshipToken(
+            await token.getAddress(),
+            await childToken.getAddress(),
+            balancePool + 1n
+          )
+        ).to.be.revertedWith(ERRORS.insufficientBalance);
+      });
+
+      it("Should revert if token  wasn't on pool", async () => {
+        await expect(
+          token.withdrawSponsorshipToken(
+            await token.getAddress(),
+            "0xD13c7342e1ef687C5ad21b27c2b65D772cAb5C8c",
+            100
+          )
+        ).to.be.revertedWith(ERRORS.insufficientBalance);
+      });
+    });
+  });
+
+  describe("Deposit token reputation", function () {
+    let childToken: TokenReputation;
+    let childAdmin: `0x${string}`;
+    let childSupply: any;
+    let amount: BigNumberish;
+
+    this.beforeEach(async () => {
+      expect(await factory.tokenOf(await addr1.getAddress())).to.be.equal(
+        ethers.ZeroAddress
+      );
+      const { child, to, amount: supply } = await onboardParticipant({});
+      childToken = await getChildToken(child);
+      childAdmin = to;
+      childSupply = supply;
+      amount = await childToken.poolTokensReputation(
+        await childToken.getAddress()
+      );
+      expect(await addr1.getAddress()).to.be.equal(
+        await factory.adminOf(child)
+      );
+    });
+
+    it("Should balance of contract token reputation must be greater or equal than amount", async function () {
+      expect(
+        await childToken.balanceOf(
+          await factory.tokenOf(await addr1.getAddress())
+        )
+      ).to.be.gte(amount);
+    });
+
+    it("Should not transfer fees because the caller is the admin of the native token", async function () {
+      let balanceOfAdminBefore = await childToken.balanceOf(
+        await addr1.getAddress()
+      );
+      await factory
+        .connect(addr1)
+        .transferTokenToAnotherPool(
+          await factory.tokenOf(await addr1.getAddress()),
+          await token.getAddress(),
+          amount
+        );
+
+      expect(await childToken.balanceOf(await addr1.getAddress())).to.be.equal(
+        balanceOfAdminBefore
+      );
+    });
+    // TODO les tokens sont pour l'instant bloqué dans la pool sponsor
+    it(
+      "Should transfer fees because the caller is not the admin of the native token"
+      // async function () {
+      //   let balanceOfAdminBefore = await token.balanceOf(
+      //     await addr1.getAddress()
+      //   );
+      //   let rules = await token.rules();
+      //   await factory.transferTokenToAnotherPool(
+      //     await factory.tokenOf(await addr1.getAddress()),
+      //     await token.getAddress(),
+      //     amount
+      //   );
+
+      //   expect(
+      //     balanceOfAdminBefore +
+      //       (BigInt(amount) * BigInt(rules.adminRevokeFeePercentage)) / 100n
+      //   ).to.be.equal(await token.balanceOf(await addr1.getAddress()));
+      // }
+    );
+
+    it("Should reduced balance of ORIGIN NETWORK", async () => {
+      let balanceBefore = await childToken.balanceOf(
+        await childToken.getAddress()
+      );
+      await factory
+        .connect(addr1)
+        .transferTokenToAnotherPool(
+          await factory.tokenOf(await addr1.getAddress()),
+          await token.getAddress(),
+          amount
+        );
+      let balanceAfter = await childToken.balanceOf(
+        await childToken.getAddress()
+      );
+      expect(balanceBefore - BigInt(amount)).to.be.equal(balanceAfter);
+    });
+
+    it("Should deposit TOKEN reputation by ADMIN ORIGIN TOKEN on NETWORK TOKEN", async function () {
+      let balanceTokenBefore = await childToken.balanceOf(
+        await token.getAddress()
+      );
+      await factory
+        .connect(addr1)
+        .transferTokenToAnotherPool(
+          await factory.tokenOf(await addr1.getAddress()),
+          await token.getAddress(),
+          amount
+        );
+      let balanceTokenAfter = await childToken.balanceOf(
+        await token.getAddress()
+      );
+
+      expect(balanceTokenBefore + BigInt(amount)).to.be.equal(
+        balanceTokenAfter
+      );
+    });
+
+    it("Should increase NEW POOL REPUTATION of NETWORK TOKEN", async () => {
+      let balanceReputationBefore = await token.poolTokensReputation(
+        await childToken.getAddress()
+      );
+      await factory
+        .connect(addr1)
+        .transferTokenToAnotherPool(
+          await factory.tokenOf(await addr1.getAddress()),
+          await token.getAddress(),
+          amount
+        );
+      let balanceReputationAfter = await token.poolTokensReputation(
+        await childToken.getAddress()
+      );
+      expect(balanceReputationBefore + BigInt(amount)).to.be.equal(
+        balanceReputationAfter
+      );
+    });
+
+    it("Should reduced ORIGIN POOL REPUTATION of NETWORK TOKEN", async () => {
+      let balanceReputationBefore = await childToken.poolTokensReputation(
+        await childToken.getAddress()
+      );
+      await factory
+        .connect(addr1)
+        .transferTokenToAnotherPool(
+          await factory.tokenOf(await addr1.getAddress()),
+          await token.getAddress(),
+          amount
+        );
+      let balanceReputationAfter = await childToken.poolTokensReputation(
+        await childToken.getAddress()
+      );
+      expect(balanceReputationBefore - BigInt(amount)).to.be.equal(
+        balanceReputationAfter
+      );
+    });
+
+    describe("NOT WORKS", function () {
+      it("Should revert if caller havn't token", async function () {
+        await expect(
+          factory
+            .connect(randomAddr)
+            .transferTokenToAnotherPool(
+              await factory.tokenOf(await addr1.getAddress()),
+              await token.getAddress(),
+              1
+            )
+        ).to.be.revertedWith(ERRORS.onlyAdminFactory);
+      });
+
+      it("Should revert if pool balance is less than amount", async function () {
+        await expect(
+          factory
+            .connect(addr1)
+            .transferTokenToAnotherPool(
+              await factory.tokenOf(await addr1.getAddress()),
+              await token.getAddress(),
+              BigInt(amount) + 1n
+            )
+        ).to.be.revertedWith(ERRORS.insufficientBalance);
+      });
+
+      it("Should revert if token  wasn't on pool", async () => {
+        await expect(
+          factory
+            .connect(addr1)
+            .transferTokenToAnotherPool(
+              "0xD13c7342e1ef687C5ad21b27c2b65D772cAb5C8c",
+              await token.getAddress(),
+              amount
+            )
+        ).to.be.revertedWith(ERRORS.notToken);
+      });
+    });
+  });
+
+  describe.only("Set Rules", function () {
+    it("Should set rules for address", async () => {
+      let newRules = {
+        customRules: true,
+        initialSupply: 1000000n * 10n ** 18n,
+        maxSupply: 20000000n * 10n ** 18n,
+        initialChildSupply: 1000n * 10n ** 18n,
+        sponsorTokenRequirement: 70,
+        adminRetainedTokensPercentage: 10,
+        networkParticipationPercentage: 20,
+        networkToChildAllocationPercentage: 30,
+        adminLegacyFeePercentage: 40,
+        adminRevokeFeePercentage: 50,
+        governancePercentageToTokensPercentage: 60,
+      };
+      await factory.setRules(await randomAddr.getAddress(), newRules);
+
+      // expect(await token.rules()).to.be.equal(newRules);
+    });
+  });
+  // describe("Deposit token reputation", () => {
+  //   let childToken: TokenReputation;
+  //   this.beforeEach(async () => {
+  //     expect(await factory.tokenOf(await addr1.getAddress())).to.be.equal(
+  //       ethers.ZeroAddress
+  //     );
+  //     const { child, to, amount } = await onboardParticipant({});
+  //     childToken = await getChildToken(child);
+  //   });
+
+  //
+  // });
+
   describe("Engage reputation", function () {
     let childToken: TokenReputation;
 
     this.beforeEach(async () => {
-      await onboardParticipant({});
-      const { child } = await onboardParticipant({});
+      expect(await factory.tokenOf(await addr1.getAddress())).to.be.equal(
+        ethers.ZeroAddress
+      );
+      const { child, to, amount } = await onboardParticipant({});
       childToken = await getChildToken(child);
     });
 

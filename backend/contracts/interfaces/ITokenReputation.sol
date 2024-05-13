@@ -29,6 +29,11 @@ interface ITokenReputation is IERC20, IOwnable {
         address _addr
     ) external view returns (uint256);
 
+    function poolTokensForSponsor(
+        address _sponsorOrToken,
+        address _token
+    ) external view returns (uint256);
+
     function particularRules(
         address _addr
     ) external view returns (DataTypes.AdminRules memory);
@@ -61,6 +66,14 @@ interface ITokenReputation is IERC20, IOwnable {
     function setTokenURI(string memory _tokenURI) external;
 
     function tokenURI(uint256 id) external view returns (string memory);
+
+    function depositReputation(uint256 _amount) external returns (bool);
+
+    function withdrawReputationFromFactory(
+        address _token,
+        address _toNewNetwork,
+        uint256 _amount
+    ) external returns (uint256 netAmount);
 
     function rules() external view returns (DataTypes.AdminRules memory);
 }

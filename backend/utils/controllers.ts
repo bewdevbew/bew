@@ -55,6 +55,7 @@ export const deployContract = async ({}) => {
   const factory = await Factory.deploy();
 
   await factory.waitForDeployment();
+
   const Token = await ethers.getContractFactory("TokenReputation");
   const token = (await Token.attach(
     await factory.genesisToken()

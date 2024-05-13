@@ -166,29 +166,6 @@ contract TokenReputationFactory is Ownable {
         return address(childToken);
     }
 
-    function addParticularRules(
-        address _sponsored,
-        DataTypes.AdminRules memory _rules
-    ) public {
-        // TODO Permettre de modifier ses rules qui n'ont pas à être immuable
-        require(
-            _sponsored != msg.sender,
-            "TokenReputationFactory: Own rules can't be set"
-        );
-        MintLogic.checkRules(_rules);
-        address forToken;
-        if (msg.sender == owner()) {
-            forToken = genesisToken;
-        } else {
-            forToken = tokenOf[msg.sender];
-        }
-        require(
-            forToken != address(0),
-            "TokenReputationFactory: Rules can be set only by admin of token"
-        );
-        particularRules[forToken][_sponsored] = _rules;
-    }
-
     function _mint(
         address _owner,
         string memory _name,
@@ -225,5 +202,45 @@ contract TokenReputationFactory is Ownable {
             _rules.initialSupply
         );
         return newToken;
+    }
+
+    function transferTokenToAnotherPool(
+        address _currentPoolNetwork,
+        address _newPoolNetwork,
+        uint _amount
+    ) external onlyExist(_currentPoolNetwork) onlyExist(_newPoolNetwork) {
+        address tokenReputation = tokenOf[msg.sender];
+        require(
+            tokenReputation != address(0),
+            "TokenReputationFactory: Caller must admin a token"
+        );
+        ITokenReputation(_currentPoolNetwork).withdrawReputationFromFactory(
+            tokenReputation,
+            _newPoolNetwork,
+            _amount
+        );
+    }
+
+    function setRules(
+        address _sponsored,
+        DataTypes.AdminRules memory _rules
+    ) public {
+        // TODO Permettre de modifier ses rules qui n'ont pas à être immuable
+        require(
+            _sponsored != msg.sender || tokenOf[msg.sender] != _sponsored,
+            "TokenReputationFactory: Own rules can't be set"
+        );
+        MintLogic.checkRules(_rules);
+        address forToken;
+        if (msg.sender == owner()) {
+            forToken = genesisToken;
+        } else {
+            forToken = tokenOf[msg.sender];
+        }
+        require(
+            forToken != address(0),
+            "TokenReputationFactory: Rules can be set only by admin of token"
+        );
+        particularRules[forToken][_sponsored] = _rules;
     }
 }

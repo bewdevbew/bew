@@ -1,4 +1,8 @@
 export const ERRORS = {
-  onlyAdmin:
-    "You must own at least 50% of the token supply to be able to call this function",
+  onlyAdmin: "TokenReputation: Caller must admin a token",
+  onlyAdminFactory: "TokenReputationFactory: Caller must admin a token",
+  withdrawAuth: "TokenReputation: Caller must be sponsor or admin of the token",
+  insufficientBalance:
+    "TokenReputation: Not enough tokens to access this function",
+  notToken: "TokenReputationFactory: Only token can call this function",
 };

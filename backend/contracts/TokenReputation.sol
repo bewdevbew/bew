@@ -115,37 +115,7 @@ contract TokenReputation is ERC20, Ownable {
         string calldata _name,
         string calldata _symbol
     ) public onlyAdminOf(address(this)) returns (address) {
-        /**
-         * @dev First we check if the participant has custom rules
-         * @notice Rules are set by the admin
-         */
-
-        /**
-         * @dev Mint the new token reputation with his rules.
-         */
-
-        // TODO enlever l'argument rules et le trouver dans la factory
         address newToken = iFactory.mint(_for, _amount, _name, _symbol);
-
-        /**
-         * @notice Functionality explained on top of _reciprocalExchange function
-         */
-        // _reciprocalExchange(_for, _amount, _rules, ITokenReputation(newToken));
-
-        /**
-         * @dev Calculate the allocation of the child token to the Network
-         * @notice The Network receive a percentage of the child token from factory mint function
-         * and allocate a part of his balance to his pool
-         */
-        // uint256 allocationChildToken = (((_amount *
-        //     _rules.adminRetainedTokensPercentage) / 100) *
-        //     _rules.networkParticipationPercentage) / 100;
-
-        // if (allocationChildToken > 0) {
-        //     iToken.addReserveSponsor(address(iToken), _amount);
-        //     _commitTokenReputation(allocationChildToken, msg.sender, newToken);
-        // }
-        // TODO Participer au nouveau token
         if (isBanned[_for]) {
             isBanned[_for] = false;
         }
@@ -173,54 +143,31 @@ contract TokenReputation is ERC20, Ownable {
         return iFactory.rulesOf(address(this), _for);
     }
 
-    /**
-    * @notice The protocol implements a reciprocity mechanism which implies 
-        that as soon as a NETWORK deploys a new CHILD TOKEN, 
-        it retains x CHILD TOKEN and sends y NETWORK TOKEN. 
-    */
-    function _reciprocalExchange(
-        address _for,
-        uint256 _amount,
-        DataTypes.AdminRules memory _rules,
-        ITokenReputation iToken
-    ) internal returns (bool) {
-        /**
-         * @dev First we calculate the retained CHILD TOKEN by the NETWORK
-         * @notice Some retained tokens are sent to the ADMIN wallet (adminRetainedTokens - networkParticipation)
-         * and the rest is sent to the pool of the NETWORK (networkParticipation)
-         * it's depend of the rules : adminRetainedTokensPercentage & networkParticipationPercentage
-         */
-        uint256 retainedTokens = (_amount *
-            _rules.adminRetainedTokensPercentage) / 100;
-        if (retainedTokens > 0) {
-            uint256 networkParticipation = (retainedTokens *
-                _rules.networkParticipationPercentage) / 100;
-            iToken.transfer(owner(), retainedTokens - networkParticipation);
-            poolTokensForSponsor[owner()][
-                address(iToken)
-            ] += networkParticipation;
-        }
-        iToken.transfer(_for, _amount - retainedTokens);
-        iToken.transferOwnership(_for);
-        /**
-         * @dev Token Network send to the new participant are minted and it's the only way to mint token
-         * @notice Protocol need reciprocal exchange of tokens
-         * between Network and Child Token. Each token minted by the Network
-         * received a token Network allocated directly to his pool
-         */
-        _mint(
-            _for,
-            (_amount * _rules.networkToChildAllocationPercentage) / 100
-        );
-        return true;
-    }
-
     function mint(uint _amount) public onlyFactory {
         require(
             MAX_SUPPLY >= totalSupply() + _amount,
             "TokenReputation: can't overflow MAX_SUPPLY"
         );
         _mint(factory, _amount);
+    }
+
+    function withdrawSponsorshipToken(
+        address _sponsor,
+        address _erc20,
+        uint _amount
+    ) external {
+        require(
+            msg.sender == _sponsor ||
+                iFactory.adminOf(_erc20) == msg.sender ||
+                iFactory.adminOf(_sponsor) == msg.sender,
+            "TokenReputation: Caller must be sponsor or admin of the token"
+        );
+        require(
+            poolTokensForSponsor[_sponsor][_erc20] >= _amount,
+            "TokenReputation: Not enough tokens to access this function"
+        );
+        poolTokensForSponsor[_sponsor][_erc20] -= _amount;
+        ERC20(_erc20).transfer(msg.sender, _amount);
     }
 
     // ! CHECK
@@ -269,23 +216,84 @@ contract TokenReputation is ERC20, Ownable {
         address _erc20,
         uint256 _amount
     ) internal {
+        require(_amount > 0, "TokenReputation: Amount must be greater than 0");
         require(ERC20(_erc20).transferFrom(factory, address(this), _amount));
         poolTokensForSponsor[_for][_erc20] += _amount;
     }
 
-    // function _approveAdministrationToken(address _token, address _forTokenReputation, uint256 _amount)
-    //     public
-    //     onlyAdminOf(_token)
-    // {
-    //     ERC20(_token).approve(_forTokenReputation, _amount);
-    //     ITokenReputation iToken = ITokenReputation(_token);
+    /**
+     * @dev Function to deposit reputation tokens to the contract
+     * @notice This function is only callable by token reputation contract. It's called from withdrawReputationFromFactory
+     * @param _amount can be smaller than withdrawReputationFromFactory in case of admin fee
+     */
+    function depositReputation(uint256 _amount) public returns (bool) {
+        require(!isBanned[msg.sender], "TokenReputation: Caller is banned");
+        require(
+            iFactory.adminOf(msg.sender) != address(0),
+            "TokenReputation: Caller must be token"
+        );
+        require(_amount > 0, "TokenReputation: Amount must be greater than 0");
+        require(
+            msg.sender != address(this),
+            "TokenReputation: Can't deposit to itself with this function"
+        );
+        require(
+            ERC20(msg.sender).transferFrom(msg.sender, address(this), _amount)
+        );
+        poolTokensReputation[msg.sender] += _amount;
+        return true;
+    }
 
-    // }
+    /**
+     * @dev Function to transfer reputation tokens to an external pool of another Token reputation
+     * @notice This function is only callable by the factory and factory allowed only admin of token
+     * Factory will send fee to the ADMIN if ADMIN have rules revoke fees
+     */
+    function withdrawReputationFromFactory(
+        address _token,
+        address _toNewNetwork,
+        uint256 _amount
+    ) public onlyFactory returns (uint256 netAmount) {
+        require(
+            poolTokensReputation[_token] >= _amount,
+            "TokenReputation: Not enough tokens to access this function"
+        );
+        require(
+            poolTokensReputation[_toNewNetwork] > 0 ||
+                poolTokensForSponsor[_toNewNetwork][_token] > 0 ||
+                poolTokensForSponsor[address(this)][_toNewNetwork] > 0,
+            "TokenReputation: New network isn't allowed to receive tokens"
+        );
 
+        address admin = iFactory.adminOf(_token);
+        uint256 feeAmount;
+        if (_token != address(this)) {
+            feeAmount =
+                (_amount *
+                    iFactory
+                        .rulesOf(address(this), _token)
+                        .adminRevokeFeePercentage) /
+                100;
+            netAmount = _amount - feeAmount;
+        } else {
+            netAmount = _amount;
+        }
+        poolTokensReputation[_token] -= _amount;
+
+        ITokenReputation iToken = ITokenReputation(_token);
+        iToken.approve(_toNewNetwork, netAmount);
+        ITokenReputation(_toNewNetwork).depositReputation(netAmount);
+
+        if (feeAmount > 0)
+            iToken.transfer(iFactory.adminOf(address(this)), feeAmount);
+    }
+
+    //TODO onlyFactory ?
+    // TODO delete ?
     function allocateToSponsorPool(uint256 _amount, address _token) public {
         require(
             poolTokensReputation[_token] >= _amount,
-            "Not enough tokens to access this function"
+            "TokenReputation: Not enough tokens to access this function"
         );
         // DataTypes.AdminRules memory _rules = iFactory.rulesOf(
         //     address(this),
