@@ -1105,8 +1105,7 @@ describe("TokenReputation", function () {
     });
   });
 
-  // TODO je dois faire un transfer reputation
-  describe.only("transferReputationByAdmin", function () {
+  describe("transferReputationByAdmin", function () {
     let childToken: TokenReputation;
 
     this.beforeEach(async () => {
@@ -1273,6 +1272,50 @@ describe("TokenReputation", function () {
       });
 
       it("Should revert if token haven't access of NETWORK");
+    });
+  });
+
+  describe("Governance", function () {
+    describe("DepositOnGovernance", function () {
+      describe("ETH", function () {
+        it("Should deposit ETH on contract", async function () {
+          let amount = 1n * 10n ** 18n;
+          const balance = await ethers.provider.getBalance(
+            await token.getAddress()
+          );
+          await token.depositETHOnGovernance({ value: amount });
+          expect(
+            await ethers.provider.getBalance(await token.getAddress())
+          ).to.be.equal(balance + amount);
+        });
+
+        it("Should update pool governance", async function () {
+          let amount = 1n * 10n ** 18n;
+          let balanceGovernance = await token.poolTokensForGovernance(
+            ethers.ZeroAddress
+          );
+          await token.depositETHOnGovernance({ value: amount });
+          expect(
+            await token.poolTokensForGovernance(ethers.ZeroAddress)
+          ).to.be.equal(balanceGovernance + amount);
+        });
+
+        describe("NOT WORKS", function () {
+          it("Should revert if value == 0", async () => {
+            await expect(token.depositETHOnGovernance()).to.be.revertedWith(
+              ERRORS.AMOUNT_CANT_BE_ZERO
+            );
+          });
+
+          it("Should revert if value > balance", async () => {
+            let balance = await ethers.provider.getBalance(
+              await owner.getAddress()
+            );
+            await expect(token.depositETHOnGovernance({ value: balance + 1n }))
+              .to.be.rejected;
+          });
+        });
+      });
     });
   });
 

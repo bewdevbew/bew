@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 library DataTypes {
+    // TODO Move this to event library
     event NewTokenOnboarded(
         address indexed token,
         address indexed to,

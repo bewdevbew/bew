@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/ITokenReputation.sol";
 import "./interfaces/ITokenReputationFactory.sol";
 import {DataTypes} from "./libraries/DataTypes.sol";
+import {Events} from "./libraries/Events.sol";
 import {Errors} from "./libraries/helpers/Errors.sol";
 // TODO corriger l'énorme faille de sécurité du _owner dans le constructeur.
 // TODO corriger l'énorme faille de sécurité du sponsor if TokenNetwork est dans la pool token reputation du smart contract
@@ -26,14 +27,14 @@ contract TokenReputation is ERC20, Ownable {
     ITokenReputationFactory immutable iFactory;
     uint256 public immutable MAX_SUPPLY;
 
-    // ! rules now is store on factory
-    // DataTypes.AdminRules public rules;
+    uint256 public constant AIRDROP_DELAY = 30 days;
 
     mapping(address => uint256) public poolTokensForGovernance;
     mapping(address => uint256) public poolTokensReputation;
     mapping(address => mapping(address => uint256)) public poolTokensForSponsor;
     mapping(address => DataTypes.AdminRules) public particularRules;
     mapping(address => bool) public isBanned;
+    mapping(address => mapping(address => uint256)) public lastAirdropClaimed;
 
     modifier onlyFactory() {
         require(msg.sender == factory, Errors.CALLER_NOT_FACTORY);
@@ -221,6 +222,37 @@ contract TokenReputation is ERC20, Ownable {
         require(_amount > 0, Errors.AMOUNT_CANT_BE_ZERO);
         require(ERC20(_erc20).transferFrom(factory, address(this), _amount));
         poolTokensForSponsor[_for][_erc20] += _amount;
+    }
+
+    function depositOnGovernance(address _erc20, uint _amount) external {
+        require(ERC20(_erc20).transferFrom(msg.sender, address(this), _amount));
+        poolTokensForGovernance[_erc20] += _amount;
+        emit Events.DepositOnGovernance(msg.sender, _erc20, _amount);
+    }
+
+    // ? Ouvrir la pool réputation si msg.value > 0
+    function depositETHOnGovernance() external payable {
+        require(msg.value > 0, Errors.AMOUNT_CANT_BE_ZERO);
+        poolTokensForGovernance[address(0)] += msg.value;
+        emit Events.DepositOnGovernance(msg.sender, address(0), msg.value);
+    }
+
+    function claimAirdrop(address _erc20) external {
+        require(poolTokensReputation[_erc20] > 0, Errors.INSUFFICIENT_BALANCE);
+        require(
+            lastAirdropClaimed[msg.sender][_erc20] + AIRDROP_DELAY <
+                block.timestamp,
+            Errors.CALLER_CANT_USE_FUNCTION
+        );
+        lastAirdropClaimed[msg.sender][_erc20] = block.timestamp;
+        // TODO Faire en fonction du token price
+        uint256 amount = poolTokensReputation[_erc20] / 100;
+        poolTokensReputation[_erc20] -= amount;
+        if (_erc20 == address(0)) {
+            payable(msg.sender).transfer(amount);
+        } else {
+            ERC20(_erc20).transfer(msg.sender, amount);
+        }
     }
 
     /**
