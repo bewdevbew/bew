@@ -12,6 +12,8 @@
     "coverage": "jest --coverage --passWithNoTests"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.36.0",
+    "ethers": "^6.12.1",
     "next": "14.2.3",
     "react": "^18",
     "react-dom": "^18",
