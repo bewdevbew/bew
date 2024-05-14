@@ -37,4 +37,14 @@ library DataTypes {
         uint8 adminRevokeFeePercentage;
         uint8 governancePercentageToTokensPercentage; // Nombre de tokens a redistribué de la gouvernance vers les sponsor
     }
+
+    struct TokenInfo {
+        address admin;
+        address networkToken;
+        string name;
+        string symbol;
+        uint256 legacy;
+        uint256 totalSupply;
+        AdminRules rules;
+    }
 }

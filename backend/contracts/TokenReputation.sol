@@ -18,20 +18,132 @@ contract TokenReputation is ERC20, Ownable {
         address indexed to,
         uint256 value
     );
+
     string public dataURI;
     string public baseTokenURI;
+    /**
+     * @notice Représente le nombre de token réputation créé par ce network
+     * Ce chiffre est uniquement incrémental et peut être déterminant pour
+     * l'attribution de certaines récompenses ou avantages dans certains Network
+     */
     uint256 public legacyLength;
+
+    /**
+     * @notice Représente la factory qui a déployé ce smart contract
+     * Le protocole ZeroDay ne reconnait que l'address de sa propre factory
+     * mais certains protocoles peuvent accepter des factorys tierces
+     */
     address public factory;
     ITokenReputationFactory immutable iFactory;
+
+    /**
+     * @notice Représente le nombre maximum de token réputation que ce network peut miné
+     * Dès lors que la MAX_SUPPLY est atteinte, le network ne peut plus onboardé de nouveau token de réputation
+     */
     uint256 public immutable MAX_SUPPLY;
 
+    /**
+     * @notice Représente le délai minimum entre chaque claim d'Airdrop
+     * Ce délai est mis en place pour éviter les abus de claim d'Airdrop
+     * Chaque address remplissant les conditions peut claim un airdrop pour
+     * un token ERC20 ou ETH mais doit attendre 30 jours avant de pouvoir
+     * en reclamer un autre pour ce même token.
+     *
+     * Une address peut donc claim plusieurs token le même jour mais jamais
+     * le même token plus d'une fois par mois
+     *
+     * @dev Ce délai est fixe et ne peut être modifié
+     *
+     */
     uint256 public constant AIRDROP_DELAY = 30 days;
 
+    /**
+     * @notice Représente le nombre de token réputation que ce network a en réserve
+     * pour récompenser les address de son network
+     *
+     * Les tokens en réserve peuvent être utilisé pour les airdrops mais sont
+     * également à disposition de l'ADMIN du réseau pour n'importe quel usage
+     * comme participer à un autre réseau
+     *
+     * L'intérêt de déposer des tokens dans cette pool est uniquement de participer
+     * au développement du réseau, de signaler à l'ADMIN que vous souhaiter intégrer
+     * ce NETWORK, voir de pouvoir profiter des AIRDROP arbitraire organisé par l'ADMIN.
+     *
+     * L'ADMIN du réseau a également la possibilité d'ouvrir le réseau pour tout ceux qui
+     * ont déposé un montant minimum d'ETH dans cette pool.
+     *
+     * @dev Contrairement aux autres pools, les tokens en réserve ne sont pas
+     * accessible par ceux qui les ont déposé.
+     *
+     * poolTokensForGovernance[address] Adresse du token ERC20 ou 0x0 pour ETH
+     * uint256 Montant de token déposé
+     */
     mapping(address => uint256) public poolTokensForGovernance;
+
+    /**
+     * @notice Représente la balance de TokenReputation que chaque address a dans ce NETWORK
+     * Cette pool est accessible uniquement pour les tokens que l'ADMIN autorise à l'intégrer
+     * Chaque ADMIN des TokenReputation en réserve peuvent à tout moment retirer leur token
+     * de cette pool pour les envoyer sur un autre réseau ou simplement les rappatrier vers leurs wallet.
+     *
+     * En revanche, chaque révocation peut entraîner des frais de révocation envoyer vers l'ADMIN du NETWORK
+     *
+     * @dev Le caller peut déposer uniquement ses tokenOf(caller) dans cette pool
+     *
+     * poolTokensReputation[address] Adresse du TokenReputation. Seul les tokens reconnu par la factory peuvent y être déposé
+     * uint256 Montant de TokenReputation déposé
+     */
     mapping(address => uint256) public poolTokensReputation;
+
+    /**
+    * @notice Représente la balance de token ERC20 que chaque address a dans ce NETWORK
+    * Comme pour la pool de reputation, seul les tokens autorisé dans ce NETWORK peuvent être déposé
+    * dans cette pool.
+    * 
+    * Contraiement à la pool de reputation, les tokens déposé dans cette pool sont accessible par
+    * l'ADMIN (caller) du TokenReputation & l'ADMIN(owner) du NETWORK mais également par l'ADMIN du TokenReputation 
+    * déposé. Ces 3 addresses y ont accès à tout moment & là aussi des frais seront transféré à l'ADMIN du NETWORK
+    * en cas de révocation.
+    *
+    * Si le caller a accès à cette pool alors il peut déposer n'importe quel token ERC20
+    * 
+    * @dev poolTokensForSponsor[address]:Adresse du TokenReputation. Seul les tokens reconnu par la factory peuvent y accéder
+    // TODO à vérifier
+    // TODO 0x0 pour ETH
+    * @dev poolTokensForSponsor[address][address]: Address du token ERC20. Tout les tokens peuvent y être déposé
+    *
+     */
     mapping(address => mapping(address => uint256)) public poolTokensForSponsor;
-    mapping(address => DataTypes.AdminRules) public particularRules;
+
+    /**
+     * @notice Représente la liste des address bannis de ce NETWORK
+     * Les address bannis ne peuvent plus intéragir avec ce NETWORK si ce n'est avec les fonctions de
+     * l'interface ERC20 ou le dépot de token dans la gouvernance.
+     *
+     * L'ADMIN du NETWORK peut à tout moment révoquer le ban d'une address
+     *
+     * L'ADMIN du NETWORK peut à tout moment bannir une address qui participe déjà à ce NETWORK
+     * Le banissement d'un participant l'empêcheras d'accéder au AIRDROP de la pool de gouvernance,
+     * de déposer des tokens dans la pool de reputation ou de sponsor, mais pourras malgré tout retirer
+     * ses tokens des pools auxquels il aura participer.
+     *
+     *
+     * @dev isBanned[address]: Adresse du bannis. Peut représenter un wallet mais également un Token
+     */
     mapping(address => bool) public isBanned;
+
+    /**
+     * @notice Représente le dernier claim d'Airdrop de token pour chaque address
+     * Chaque address peut claim un airdrop pour un token ERC20 ou ETH mais doit attendre 30 jours
+     * avant de pouvoir en reclamer un autre pour ce même token.
+     *
+     *
+     * Une address peut donc claim plusieurs token le même jour mais jamais le même token plus d'une fois par mois
+     *
+     * @dev lastAirdropClaimed[address]: Adresse de l'address qui a claim l'airdrop
+     * @dev lastAirdropClaimed[address][address]: Adresse du token ERC20 ou 0x0 pour ETH
+     * @dev uint256: Timestamp du dernier claim
+     */
     mapping(address => mapping(address => uint256)) public lastAirdropClaimed;
 
     modifier onlyFactory() {
@@ -71,7 +183,25 @@ contract TokenReputation is ERC20, Ownable {
         _;
     }
 
-    // Constructor to initialize the contract with token details and owner's initial balance
+    /**
+     * @notice Le TokenReputation est créé depuis la factory. C'est elle qui renseigne les informations
+     * Le METANETWORK peut récupérer des frais de création de token en fonction des règles qu'il aura 
+     * lui même établis et qui s'applique sur l'initialSupply.
+     * Le reste de l'initialSupply est conservé par le contrat dans la pool de réputation de l'admin
+     * L'ADMIN pourras accéder à ses tokens à tout moment afin de les retirer et d'en profiter comme bon lui semble
+     *
+     * @dev Le TokenReputation supporte l'interface ERC20, Ownable & TokenReputation
+     * * ERC20:
+     *    * - name & symbol: Nom et symbole du token ERC20
+     *    * - initialSupplu: Total de token ERC20 préminé
+     *    * - maxSupply: Total de token ERC20 maximum que le NETWORK peut miné
+     // TODO Retirer Ownable si pas besoin
+     * * Ownable:
+     *    * - owner: Adresse du propriétaire du smart contract. Le Owner représente le déployer original
+     * * TokenReputation:
+     *    * - factory: Adresse de la factory qui a déployé ce smart contract
+     *    * - rules: Règles établis par le METANETWORK pour ce TokenReputation
+     */
     constructor(
         address _owner,
         string memory _name,
@@ -84,9 +214,10 @@ contract TokenReputation is ERC20, Ownable {
         uint256 mintedFees = (_rules.initialSupply *
             _rules.adminRetainedTokensPercentage) / 100;
         approve(msg.sender, _rules.maxSupply);
-        // approve(address(this), _rules.maxSupply);
 
-        _mint(msg.sender, mintedFees); // Factory send the total supply to the owner after deployment
+        if (mintedFees > 0) {
+            _mint(msg.sender, mintedFees); // Factory send the total supply to the owner after deployment
+        }
         _mint(address(this), _rules.initialSupply - mintedFees);
         poolTokensReputation[address(this)] +=
             _rules.initialSupply -
@@ -94,6 +225,23 @@ contract TokenReputation is ERC20, Ownable {
 
         MAX_SUPPLY = _rules.maxSupply;
         emit NewTokenOnboarded(address(this), _owner, _rules.initialSupply);
+    }
+
+    /**
+     * @notice Fonction pour récupérer les informations onchain relatif au TokenReputation
+     */
+
+    function getInfo() public view returns (DataTypes.TokenInfo memory) {
+        return
+            DataTypes.TokenInfo({
+                admin: iFactory.adminOf(address(this)),
+                networkToken: iFactory.childTokenToNetworkTokens(address(this)),
+                name: name(),
+                symbol: symbol(),
+                legacy: legacyLength,
+                totalSupply: totalSupply(),
+                rules: rules()
+            });
     }
 
     function isContract(address _addr) private view returns (bool) {
@@ -104,17 +252,43 @@ contract TokenReputation is ERC20, Ownable {
         return (size > 0);
     }
 
+    /**
+     * @notice Fonction pour récupérer les règles établis par le METANETWORK pour ce TokenReputation
+     * @return DataTypes.AdminRules Règles prévu au sein de la factory pour ce TokenReputation
+     */
     function rules() public view returns (DataTypes.AdminRules memory) {
         return iFactory.rulesOf(address(this), address(this));
     }
 
     /**
-     * @dev Function to mint a new token reputation for a participant
+     * @notice Function to mint a new token reputation for a participant
+     * and integrate it into the network
+     *
+     * @dev This function is call factory to mint a new token reputation
+     * Cette fonction ne peut être utilisé que par l'ADMIN du NETWORK
+     *
      * @param _for The address of the participant to mint the token for
      * @param _name The name of the new token reputation
      * @param _symbol The symbol of the new token reputation
+     *
      * @return The address of the new token reputation
      */
+
+    function _onboardParticipant(
+        address _for,
+        string calldata _name,
+        string calldata _symbol
+    ) internal returns (address) {
+        address newToken = iFactory.mint(_for, _name, _symbol);
+        isBanned[_for] = false;
+        legacyLength += 1;
+        emit NewTokenOnboarded(
+            address(newToken),
+            _for,
+            iFactory.rulesOf(address(this), _for).initialSupply
+        );
+        return newToken;
+    }
 
     function onboardParticipant(
         address _for,
@@ -125,11 +299,8 @@ contract TokenReputation is ERC20, Ownable {
     }
 
     /**
-     * @dev Function to mint a new token reputation for a participant
-     * @param _for The address of the participant to mint the token for
-     * @param _name The name of the new token reputation
-     * @param _symbol The symbol of the new token reputation
-     * @return The address of the new token reputation
+     * @notice Cette fonction permet d'onboarder un participant avec des règles
+     * de mint personnalisé
      */
 
     function onboardCustomParticipant(
@@ -151,28 +322,18 @@ contract TokenReputation is ERC20, Ownable {
         return _onboardParticipant(_for, _name, _symbol);
     }
 
-    function _onboardParticipant(
-        address _for,
-        string calldata _name,
-        string calldata _symbol
-    ) internal returns (address) {
-        address newToken = iFactory.mint(_for, _name, _symbol);
-        isBanned[_for] = false;
-        legacyLength += 1;
-        emit NewTokenOnboarded(
-            address(newToken),
-            _for,
-            iFactory.rulesOf(address(this), _for).initialSupply
-        );
-        return newToken;
-    }
-
+    // TODO delete si pas besoin
     function _findRules(
         address _for
     ) internal view returns (DataTypes.AdminRules memory) {
         return iFactory.rulesOf(address(this), _for);
     }
 
+    /**
+     * @notice Fonction pour miner des tokens et augmenter la supply du TokenReputation
+     * @dev Cette fonction ne peut être utilisé que par la factory.
+     * Elle est appelé par FactoryTokenReputation.mint à la suite d'un onboardParticipant
+     */
     function mint(uint _amount) public onlyFactory {
         require(
             MAX_SUPPLY >= totalSupply() + _amount,
@@ -180,6 +341,21 @@ contract TokenReputation is ERC20, Ownable {
         );
         _mint(factory, _amount);
     }
+
+    /**
+     * @notice Fonction pour retirer des tokens ERC20 de la pool sponsor
+     * @dev Cette fonction peut être utilisé par : 
+     //TODO remplacer sponsor par token
+     //TODO autoriser l'ADMIN du NETWORK a accéder au token
+     //TODO permettre le retrait d'ETH en passant par 0x0
+     *  * - Le sponsor
+     *  * - L'ADMIN du token ERC20 si celui-ci est un token de réputation reconnu par la factory
+     *  * - L'ADMIN du sponsor si celui-ci est un token de réputation reconnu par la factory
+    
+     * @param _sponsor Peut être un token reputation ou une address
+     * @param _erc20 Adresse du token ERC20. Peut également être un token de réputation
+     * @param _amount Montant de token à retirer
+     */
 
     function withdrawSponsorshipToken(
         address _sponsor,
@@ -199,6 +375,21 @@ contract TokenReputation is ERC20, Ownable {
         poolTokensForSponsor[_sponsor][_erc20] -= _amount;
         ERC20(_erc20).transfer(msg.sender, _amount);
     }
+
+    /**
+     * @notice Fonction pour retirer des tokens ERC20 de la pool sponsor
+     //TODO remplacer sponsor par token
+     //TODO autoriser l'ADMIN du NETWORK a accéder au token
+     //TODO permettre le retrait d'ETH en passant par 0x0
+     * @dev Cette fonction peut être utilisé par : 
+     *  * - Le sponsor
+     *  * - L'ADMIN du token ERC20 si celui-ci est un token de réputation reconnu par la factory
+     *  * - L'ADMIN du sponsor si celui-ci est un token de réputation reconnu par la factory
+     *
+     * @param _for Peut être un token reputation ou une address
+     * @param _erc20 Adresse du token ERC20. Peut également être un token de réputation
+     * @param _amount Montant de token à retirer
+     */
 
     function addReserveSponsorFromFactory(
         address _for,
@@ -222,18 +413,48 @@ contract TokenReputation is ERC20, Ownable {
         poolTokensForSponsor[_for][_erc20] += _amount;
     }
 
+    /**
+     * @notice Permet de déposer des tokens ERC20 afin de récompenser la gouvernance
+     * Cette fonction n'a pas d'autre utilité que de permettre à signaler à l'ADMIN
+     * que vous souhaitez intégrer ce NETWORK.
+     *
+     * En revance des tokens peuvent construire des règles autour afin de permettre un intérêt
+     *
+     *
+     * @dev La fonction est accessible par n'importe quel address Ethereum
+     *
+     * @param _erc20 Adresse du token ERC20
+     * @param _amount Montant de token déposé
+     */
+
     function depositOnGovernance(address _erc20, uint _amount) external {
         require(ERC20(_erc20).transferFrom(msg.sender, address(this), _amount));
         poolTokensForGovernance[_erc20] += _amount;
         emit Events.DepositOnGovernance(msg.sender, _erc20, _amount);
     }
 
-    // ? Ouvrir la pool réputation si msg.value > 0
+    /**
+     * @notice Permet de déposer des ETH afin de récompenser la gouvernance
+     * L'ADMIN peu choisir d'ouvrir le réseau à tout ceux qui ont déposé un montant minimum
+     * qu'il aura lui même défini
+     *
+     * @dev La balance ETH est stocké dans la pool de gouvernance à l'adresse 0x0
+     *
+     // TODO Ouvrir la pool réputation si msg.value > x
+     */
     function depositETHOnGovernance() external payable {
         require(msg.value > 0, Errors.AMOUNT_CANT_BE_ZERO);
         poolTokensForGovernance[address(0)] += msg.value;
         emit Events.DepositOnGovernance(msg.sender, address(0), msg.value);
     }
+
+    /**
+     * @notice Permet de réclamer des tokens de la pool de gouvernance
+     *
+     * @dev Cette fonction est accessible par toutes les TokenReputation
+     * ayant accès au NETWORK
+     *
+     */
 
     function claimAirdrop(address _erc20) external {
         require(poolTokensReputation[_erc20] > 0, Errors.INSUFFICIENT_BALANCE);
@@ -337,18 +558,9 @@ contract TokenReputation is ERC20, Ownable {
             iToken.transfer(iFactory.adminOf(address(this)), feeAmount);
     }
 
-    // TODO géré l'acces au réseau
-    function transferOnPoolReputation(
-        address _toToken,
-        uint256 _amount
-    ) public returns (bool) {
-        ITokenReputation iToken = ITokenReputation(_toToken);
-        require(balanceOf(msg.sender) >= _amount, Errors.INSUFFICIENT_BALANCE);
-        require(!iToken.isBanned(address(this)), Errors.CALLER_IS_BANNED);
-        _approve(msg.sender, _toToken, _amount);
-        iToken.depositReputationFromWallet(msg.sender, _amount);
-    }
-
+    /**
+     * @notice Permet de transférer des TokenReputation vers son wallet
+     */
     function withdrawReputation(uint256 _amount) public {
         address token = iFactory.tokenOf(msg.sender);
         require(token != address(0), Errors.CALLER_NOT_OWN_TOKEN);
@@ -371,6 +583,27 @@ contract TokenReputation is ERC20, Ownable {
         iToken.transfer(msg.sender, netAmount);
         if (feeAmount > 0)
             iToken.transfer(iFactory.adminOf(address(this)), feeAmount);
+    }
+
+    /**
+     * @notice Permet de transférer des tokens de réputation d'un NETWORK à un autre
+     *
+     * @dev Cette fonction est accessible uniquement par les TokenReputation étant
+     * autorisé à accéder au NETWORK
+     *
+     * @param _toToken Adresse du TokenReputation de destination
+     * @param _amount Montant de token à transférer
+     */
+    // TODO géré l'acces au réseau
+    function transferOnPoolReputation(
+        address _toToken,
+        uint256 _amount
+    ) public returns (bool) {
+        ITokenReputation iToken = ITokenReputation(_toToken);
+        require(balanceOf(msg.sender) >= _amount, Errors.INSUFFICIENT_BALANCE);
+        require(!iToken.isBanned(address(this)), Errors.CALLER_IS_BANNED);
+        _approve(msg.sender, _toToken, _amount);
+        iToken.depositReputationFromWallet(msg.sender, _amount);
     }
 
     // ? Est ce que je dois permettre un transfer by admin pour la pool token reputation

@@ -60,6 +60,34 @@ export declare namespace DataTypes {
     adminRevokeFeePercentage: bigint;
     governancePercentageToTokensPercentage: bigint;
   };
+
+  export type TokenInfoStruct = {
+    admin: AddressLike;
+    networkToken: AddressLike;
+    name: string;
+    symbol: string;
+    legacy: BigNumberish;
+    totalSupply: BigNumberish;
+    rules: DataTypes.AdminRulesStruct;
+  };
+
+  export type TokenInfoStructOutput = [
+    admin: string,
+    networkToken: string,
+    name: string,
+    symbol: string,
+    legacy: bigint,
+    totalSupply: bigint,
+    rules: DataTypes.AdminRulesStructOutput
+  ] & {
+    admin: string;
+    networkToken: string;
+    name: string;
+    symbol: string;
+    legacy: bigint;
+    totalSupply: bigint;
+    rules: DataTypes.AdminRulesStructOutput;
+  };
 }
 
 export interface TokenReputationInterface extends Interface {
@@ -82,6 +110,7 @@ export interface TokenReputationInterface extends Interface {
       | "depositReputation"
       | "depositReputationFromWallet"
       | "factory"
+      | "getInfo"
       | "isBanned"
       | "lastAirdropClaimed"
       | "legacyLength"
@@ -178,6 +207,7 @@ export interface TokenReputationInterface extends Interface {
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "factory", values?: undefined): string;
+  encodeFunctionData(functionFragment: "getInfo", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "isBanned",
     values: [AddressLike]
@@ -309,6 +339,7 @@ export interface TokenReputationInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "factory", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "getInfo", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "isBanned", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "lastAirdropClaimed",
@@ -589,6 +620,8 @@ export interface TokenReputation extends BaseContract {
 
   factory: TypedContractMethod<[], [string], "view">;
 
+  getInfo: TypedContractMethod<[], [DataTypes.TokenInfoStructOutput], "view">;
+
   isBanned: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
 
   lastAirdropClaimed: TypedContractMethod<
@@ -814,6 +847,9 @@ export interface TokenReputation extends BaseContract {
   getFunction(
     nameOrSignature: "factory"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "getInfo"
+  ): TypedContractMethod<[], [DataTypes.TokenInfoStructOutput], "view">;
   getFunction(
     nameOrSignature: "isBanned"
   ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;

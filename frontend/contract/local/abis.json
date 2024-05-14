@@ -597,6 +597,108 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "getInfo",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "networkToken",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "symbol",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "legacy",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalSupply",
+              "type": "uint256"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "customRules",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "initialSupply",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "maxSupply",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "sponsorTokenRequirement",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint8",
+                  "name": "adminRetainedTokensPercentage",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "uint8",
+                  "name": "networkParticipationPercentage",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "uint8",
+                  "name": "networkToChildAllocationPercentage",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "uint8",
+                  "name": "adminLegacyFeePercentage",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "uint8",
+                  "name": "adminRevokeFeePercentage",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "uint8",
+                  "name": "governancePercentageToTokensPercentage",
+                  "type": "uint8"
+                }
+              ],
+              "internalType": "struct DataTypes.AdminRules",
+              "name": "rules",
+              "type": "tuple"
+            }
+          ],
+          "internalType": "struct DataTypes.TokenInfo",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",

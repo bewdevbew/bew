@@ -5,14 +5,19 @@ const CONFIGS = {
   development: {
     abis: LocalABIs,
     addresses: LocalAddresses,
+    provider: "http://localhost:8545",
   },
+  // TODO
   test: {
     abis: LocalABIs,
     addresses: LocalAddresses,
+    provider: "infura",
   },
+  // TODO
   production: {
     abis: LocalABIs,
     addresses: LocalAddresses,
+    provider: "infura",
   },
 };
 
