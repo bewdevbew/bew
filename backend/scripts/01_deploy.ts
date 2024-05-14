@@ -1,10 +1,10 @@
 import { Signer } from "ethers";
 import { deployContract } from "../utils/controllers";
+import * as fse from "fs-extra";
 
 const hre = require("hardhat");
 const fs = require("fs");
 const path = require("path");
-
 const abi_f_t = require("../artifacts/contracts/FactoryTokenReputation.sol/TokenReputationFactory.json");
 const abi_t = require("../artifacts/contracts/TokenReputation.sol/TokenReputation.json");
 
@@ -73,7 +73,11 @@ async function main() {
   const jsonString = JSON.stringify(jsonContent, null, 2);
   await writeFileAsync("addresses.json", jsonString);
   console.log("JSON file created: addresses.json");
-
+  await fse.copy(
+    path.join(__dirname, "../typechain-types"),
+    path.join(__dirname, "../../frontend/contract/typechain")
+  );
+  console.log("Typechain copied successfully!");
   return contracts;
 }
 
