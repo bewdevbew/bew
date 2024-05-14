@@ -162,6 +162,7 @@ contract TokenReputationFactory is Ownable {
      */
 
     // TODO Tester le nombre d'imbrication maximum du réseau avant que cela cause des problèmes de frais de gas
+    // TODO Envoyer la legacy fee à la gouvernance
     function _distributeLegacyFee(
         address _network,
         uint256 _tokenRetainedByAdmin,

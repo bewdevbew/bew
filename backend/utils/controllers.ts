@@ -1,3 +1,4 @@
+import { ContractNameType } from "./../types/contract";
 import { Signer } from "ethers";
 import { TokenReputation, TokenReputationFactory } from "../typechain-types";
 import { ethers } from "hardhat";
@@ -53,7 +54,7 @@ export const deployContract = async ({}) => {
   const Token = await ethers.getContractFactory("TokenReputation");
   const token = (await Token.attach(
     await factory.genesisToken()
-  )) as TokenReputation;
+  )) as unknown as TokenReputation;
 
   return { token, factory };
 };

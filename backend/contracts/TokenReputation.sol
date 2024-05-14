@@ -9,10 +9,8 @@ import "./interfaces/ITokenReputationFactory.sol";
 import {DataTypes} from "./libraries/DataTypes.sol";
 import {Events} from "./libraries/Events.sol";
 import {Errors} from "./libraries/helpers/Errors.sol";
-// TODO corriger l'énorme faille de sécurité du _owner dans le constructeur.
+//? TODO corriger l'énorme faille de sécurité du _owner dans le constructeur.
 // TODO corriger l'énorme faille de sécurité du sponsor if TokenNetwork est dans la pool token reputation du smart contract
-//! Inscrire la preuve dans la factory
-//! Si le token est dans la pool j'accepte le sponsor mais comme je n'ai pas le controle sur les regles de ce smart contract, tout ceux ayant des tokens dans ma pool sont considéré comme sponsorisé
 
 contract TokenReputation is ERC20, Ownable {
     event NewTokenOnboarded(
@@ -375,6 +373,8 @@ contract TokenReputation is ERC20, Ownable {
             iToken.transfer(iFactory.adminOf(address(this)), feeAmount);
     }
 
+    // ? Est ce que je dois permettre un transfer by admin pour la pool token reputation
+    // ? Peut être faire une règle pour plus de flexibilité et de protection
     function transferReputationByAdmin(
         address _token,
         address _to,

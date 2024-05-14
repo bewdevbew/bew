@@ -1,5 +1,8 @@
 {
-  "name": "hardhat-project",
+  "name": "zeroday-protocol",
+  "scripts": {
+    "deploy": "hardhat run scripts/01_deploy.ts --network localhost"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "hardhat": "^2.22.3"
