@@ -69,6 +69,11 @@ interface ITokenReputation is IERC20, IOwnable {
 
     function depositReputation(uint256 _amount) external returns (bool);
 
+    function depositReputationFromWallet(
+        address _from,
+        uint _amount
+    ) external returns (bool);
+
     function withdrawReputationFromFactory(
         address _token,
         address _toNewNetwork,

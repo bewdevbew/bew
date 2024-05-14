@@ -40,6 +40,17 @@ contract TokenReputation is ERC20, Ownable {
         _;
     }
 
+    // TODO Permettre l'acces au réseau à tout les tokens où le réseau est lui même intégré à ses tokens
+    modifier onlyAllowed(address _network, address _token) {
+        require(
+            poolTokensReputation[_network] > 0 ||
+                poolTokensForSponsor[_network][_token] > 0 ||
+                poolTokensForSponsor[address(this)][_network] > 0,
+            Errors.NETWORK_NOT_ALLOWED
+        );
+        _;
+    }
+
     modifier onlyAdminOf(address _token) {
         // TODO Faire une fonction dans la factory pour révoquer l'admin si balanceOf(caller) a > totalSupply/2
         require(
@@ -218,6 +229,20 @@ contract TokenReputation is ERC20, Ownable {
      * @param _amount can be smaller than withdrawReputationFromFactory in case of admin fee
      */
     function depositReputation(uint256 _amount) public returns (bool) {
+        return _depositReputation(msg.sender, _amount);
+    }
+
+    function depositReputationFromWallet(
+        address _from,
+        uint _amount
+    ) public returns (bool) {
+        return _depositReputation(_from, _amount);
+    }
+
+    function _depositReputation(
+        address _from,
+        uint256 _amount
+    ) public returns (bool) {
         require(!isBanned[msg.sender], Errors.CALLER_IS_BANNED);
         require(
             iFactory.adminOf(msg.sender) != address(0),
@@ -225,7 +250,11 @@ contract TokenReputation is ERC20, Ownable {
         );
         require(_amount > 0, Errors.AMOUNT_CANT_BE_ZERO);
         require(
-            ERC20(msg.sender).transferFrom(msg.sender, address(this), _amount)
+            ITokenReputation(msg.sender).transferFrom(
+                _from,
+                address(this),
+                _amount
+            )
         );
         poolTokensReputation[msg.sender] += _amount;
         return true;
@@ -240,7 +269,12 @@ contract TokenReputation is ERC20, Ownable {
         address _token,
         address _toNewNetwork,
         uint256 _amount
-    ) public onlyFactory returns (uint256 netAmount) {
+    )
+        public
+        onlyFactory
+        onlyAllowed(_toNewNetwork, _token)
+        returns (uint256 netAmount)
+    {
         require(
             _toNewNetwork != address(this),
             Errors.CALLER_USE_INVALID_ARGUMENT
@@ -248,12 +282,6 @@ contract TokenReputation is ERC20, Ownable {
         require(
             poolTokensReputation[_token] >= _amount,
             Errors.INSUFFICIENT_BALANCE
-        );
-        require(
-            poolTokensReputation[_toNewNetwork] > 0 ||
-                poolTokensForSponsor[_toNewNetwork][_token] > 0 ||
-                poolTokensForSponsor[address(this)][_toNewNetwork] > 0,
-            Errors.NETWORK_NOT_ALLOWED
         );
 
         address admin = iFactory.adminOf(_token);
@@ -279,23 +307,54 @@ contract TokenReputation is ERC20, Ownable {
             iToken.transfer(iFactory.adminOf(address(this)), feeAmount);
     }
 
-    function revokeParticipation(
-        uint256 _amount,
-        address _token
-    ) public onlyAdminOf(_token) {
+    // TODO géré l'acces au réseau
+    function transferOnPoolReputation(
+        address _toToken,
+        uint256 _amount
+    ) public returns (bool) {
+        ITokenReputation iToken = ITokenReputation(_toToken);
+        require(balanceOf(msg.sender) >= _amount, Errors.INSUFFICIENT_BALANCE);
+        require(!iToken.isBanned(address(this)), Errors.CALLER_IS_BANNED);
+        _approve(msg.sender, _toToken, _amount);
+        iToken.depositReputationFromWallet(msg.sender, _amount);
+    }
+
+    function withdrawReputation(uint256 _amount) public {
+        address token = iFactory.tokenOf(msg.sender);
+        require(token != address(0), Errors.CALLER_NOT_OWN_TOKEN);
         require(
-            poolTokensReputation[_token] >= _amount,
+            poolTokensReputation[token] >= _amount,
             Errors.INSUFFICIENT_BALANCE
         );
         DataTypes.AdminRules memory _rules = iFactory.rulesOf(
             address(this),
-            _token
+            token
         );
         uint256 feeAmount = (_amount * _rules.adminRevokeFeePercentage) / 100;
         uint256 netAmount = _amount - feeAmount;
+        poolTokensReputation[token] -= _amount;
+        if (token != address(this)) {
+            netAmount = _amount;
+            feeAmount = 0;
+        }
+        ITokenReputation iToken = ITokenReputation(token);
+        iToken.transfer(msg.sender, netAmount);
+        if (feeAmount > 0)
+            iToken.transfer(iFactory.adminOf(address(this)), feeAmount);
+    }
+
+    function transferReputationByAdmin(
+        address _token,
+        address _to,
+        uint256 _amount
+    ) public onlyAdminOf(address(this)) {
+        require(
+            poolTokensReputation[_token] >= _amount,
+            Errors.INSUFFICIENT_BALANCE
+        );
         poolTokensReputation[_token] -= _amount;
-        transfer(msg.sender, netAmount);
-        if (feeAmount > 0) transfer(iFactory.adminOf(address(this)), feeAmount);
+        // ? Est ce que je dois permettre un revoke fee to adminOf(_token)
+        ITokenReputation(_token).transfer(_to, _amount);
     }
 
     // Function to set the data URI, which can be used for additional metadata (change as needed)

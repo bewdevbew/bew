@@ -459,7 +459,7 @@ describe("TokenReputation", function () {
               await childToken.getAddress(),
               100
             )
-        ).to.be.revertedWith(ERRORS.INSUFFICIENT_BALANCE);
+        ).to.be.revertedWith(ERRORS.CALLER_CANT_USE_FUNCTION);
       });
 
       it("Should revert if token balance is less than amount", async function () {
@@ -1037,18 +1037,244 @@ describe("TokenReputation", function () {
       });
     });
   });
-  // describe("Deposit token reputation", () => {
-  //   let childToken: TokenReputation;
-  //   this.beforeEach(async () => {
-  //     expect(await factory.tokenOf(await addr1.getAddress())).to.be.equal(
-  //       ethers.ZeroAddress
-  //     );
-  //     const { child, to, amount } = await onboardParticipant({});
-  //     childToken = await getChildToken(child);
-  //   });
 
-  //
-  // });
+  describe("withdrawReputation", function () {
+    it("Should update pool after withdraw", async () => {
+      let balancePool = await token.poolTokensReputation(
+        await token.getAddress()
+      );
+      await token.withdrawReputation(balancePool);
+      expect(
+        await token.poolTokensReputation(await token.getAddress())
+      ).to.be.equal(0);
+    });
+
+    it("Should admin receive token", async () => {
+      let balance = await token.balanceOf(await owner.getAddress());
+      let balancePool = await token.poolTokensReputation(
+        await token.getAddress()
+      );
+      await token.withdrawReputation(balancePool);
+      expect(await token.balanceOf(await owner.getAddress())).to.be.equal(
+        balance + balancePool
+      );
+    });
+
+    it("Should reduce balance of contract", async () => {
+      let balance = await token.balanceOf(await token.getAddress());
+      let balancePool = await token.poolTokensReputation(
+        await token.getAddress()
+      );
+      await token.withdrawReputation(balancePool);
+      expect(await token.balanceOf(await token.getAddress())).to.be.equal(
+        balance - balancePool
+      );
+    });
+
+    it("Should admin receive fee token if token != address(this)", async () => {
+      let { child } = await onboardParticipant({});
+      let childToken = await getChildToken(child);
+      let balance = await childToken.balanceOf(await owner.getAddress());
+      let balancePool = await token.poolTokensReputation(
+        await childToken.getAddress()
+      );
+      await token.connect(addr1).withdrawReputation(balancePool);
+      let rules = await factory.rulesOf(
+        await token.getAddress(),
+        await childToken.getAddress()
+      );
+      expect(await childToken.balanceOf(await owner.getAddress())).to.be.equal(
+        balance + (balancePool * rules.adminRevokeFeePercentage) / 100n
+      );
+    });
+
+    describe("NOT WORKS", function () {
+      it("Should revert if caller is not the admin of the token", async () => {
+        await expect(
+          token.connect(randomAddr).withdrawReputation(100)
+        ).to.be.revertedWith(ERRORS.CALLER_NOT_OWN_TOKEN);
+      });
+
+      it("Should revert if pool balance is less than amount", async () => {
+        let { child } = await onboardParticipant({});
+        let balancePool = await token.poolTokensReputation(child);
+        await expect(
+          token.connect(addr1).withdrawReputation(balancePool + 1n)
+        ).to.be.revertedWith(ERRORS.INSUFFICIENT_BALANCE);
+      });
+    });
+  });
+
+  // TODO je dois faire un transfer reputation
+  describe.only("transferReputationByAdmin", function () {
+    let childToken: TokenReputation;
+
+    this.beforeEach(async () => {
+      expect(await factory.tokenOf(await addr1.getAddress())).to.be.equal(
+        ethers.ZeroAddress
+      );
+      const { child, to, amount } = await onboardParticipant({});
+      childToken = await getChildToken(child);
+      let balancePool = await childToken.poolTokensReputation(
+        await childToken.getAddress()
+      );
+      await factory
+        .connect(addr1)
+        .transferTokenToAnotherPool(
+          await childToken.getAddress(),
+          await token.getAddress(),
+          balancePool
+        );
+      expect(await token.poolTokensReputation(child)).to.be.gte(balancePool);
+    });
+
+    it("Should send reputation to any address", async () => {
+      let balanceBefore = await childToken.balanceOf(
+        await randomAddr.getAddress()
+      );
+      let balancePool = await token.poolTokensReputation(
+        await childToken.getAddress()
+      );
+
+      await token.transferReputationByAdmin(
+        await childToken.getAddress(),
+        await randomAddr.getAddress(),
+        balancePool
+      );
+
+      expect(
+        await childToken.balanceOf(await randomAddr.getAddress())
+      ).to.be.equal(balanceBefore + balancePool);
+    });
+
+    it("Should reduce reputation pool", async () => {
+      let balancePool = await token.poolTokensReputation(
+        await childToken.getAddress()
+      );
+      await token.transferReputationByAdmin(
+        await childToken.getAddress(),
+        await randomAddr.getAddress(),
+        balancePool
+      );
+      expect(
+        await token.poolTokensReputation(await childToken.getAddress())
+      ).to.be.equal(0);
+    });
+
+    it("Should reduce balance of contract", async () => {
+      let amount = 10n;
+      let balance = await childToken.balanceOf(await token.getAddress());
+
+      await token.transferReputationByAdmin(
+        await childToken.getAddress(),
+        await randomAddr.getAddress(),
+        amount
+      );
+
+      expect(await childToken.balanceOf(await token.getAddress())).to.be.equal(
+        balance - amount
+      );
+    });
+
+    describe("NOT WORKS", function () {
+      it("Should revert if caller isn't admin of contract", async () => {
+        await expect(
+          token
+            .connect(addr1)
+            .transferReputationByAdmin(
+              await childToken.getAddress(),
+              await randomAddr.getAddress(),
+              1
+            )
+        ).to.be.revertedWith(ERRORS.CALLER_NOT_ADMIN);
+      });
+
+      it("Should revert if pool tokens reputation is lower than amount", async () => {
+        let balancePool = await token.poolTokensReputation(
+          await childToken.getAddress()
+        );
+        await expect(
+          token.transferReputationByAdmin(
+            await childToken.getAddress(),
+            await randomAddr.getAddress(),
+            balancePool + 1n
+          )
+        ).to.be.revertedWith(ERRORS.INSUFFICIENT_BALANCE);
+      });
+    });
+  });
+
+  describe("transferOnPoolReputation", function () {
+    let childToken: TokenReputation;
+
+    this.beforeEach(async () => {
+      const { child, to, amount } = await onboardParticipant({});
+      childToken = await getChildToken(child);
+      let balancePool = await childToken.poolTokensReputation(
+        await childToken.getAddress()
+      );
+
+      expect(balancePool).to.be.lte(
+        await childToken.balanceOf(await childToken.getAddress())
+      );
+
+      expect(balancePool).to.be.gt(0);
+      await childToken.connect(addr1).withdrawReputation(balancePool);
+
+      expect(await childToken.balanceOf(await addr1.getAddress())).to.be.gte(
+        balancePool
+      );
+    });
+
+    it("Should send reputation to POOL REPUTATION", async () => {
+      let balancePool = await token.poolTokensReputation(
+        await childToken.getAddress()
+      );
+
+      let balance = await childToken.balanceOf(await addr1.getAddress());
+      await childToken
+        .connect(addr1)
+        .transferOnPoolReputation(await token.getAddress(), balance);
+      expect(
+        await token.poolTokensReputation(await childToken.getAddress())
+      ).to.be.equal(balancePool + balance);
+    });
+
+    it("Should increase balance of contract", async () => {
+      let balanceContract = await childToken.balanceOf(
+        await token.getAddress()
+      );
+
+      let balance = await childToken.balanceOf(await addr1.getAddress());
+      await childToken
+        .connect(addr1)
+        .transferOnPoolReputation(await token.getAddress(), balance);
+      expect(await childToken.balanceOf(await token.getAddress())).to.be.equal(
+        balanceContract + balance
+      );
+    });
+
+    describe("NOT WORKS", function () {
+      it("Should revert if caller haven't token", async () => {
+        await expect(
+          childToken
+            .connect(randomAddr)
+            .transferOnPoolReputation(await token.getAddress(), 1)
+        ).to.be.reverted;
+      });
+
+      it("Should revert if balance of caller is less than amount", async () => {
+        let balance = await childToken.balanceOf(await addr1.getAddress());
+        await expect(
+          childToken
+            .connect(addr1)
+            .transferOnPoolReputation(await token.getAddress(), balance + 1n)
+        ).to.be.revertedWith(ERRORS.INSUFFICIENT_BALANCE);
+      });
+
+      it("Should revert if token haven't access of NETWORK");
+    });
+  });
 
   describe("Engage reputation", function () {
     let childToken: TokenReputation;

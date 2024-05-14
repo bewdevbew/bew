@@ -139,16 +139,6 @@ contract TokenReputationFactory is Ownable {
                 adminOf[msg.sender],
                 tokensRetainedByAdmin - networkParticipation
             );
-            // TODO override addReserveSponsorFromFactory
-            // Token locked on protocol. Only Network Admin and Token Admin can access
-            // require(
-            //     networkToken.transferFrom(
-            //         address(this),
-            //         address(childToken),
-            //         networkParticipation
-            //     ),
-            //     "TokenReputationFactory: Transfer failed"
-            // );
 
             childToken.approve(address(networkToken), networkParticipation);
             networkToken.addReserveSponsorFromFactory(
@@ -170,6 +160,8 @@ contract TokenReputationFactory is Ownable {
     /**
      * @notice Distribute legacy fee to all nested network
      */
+
+    // TODO Tester le nombre d'imbrication maximum du réseau avant que cela cause des problèmes de frais de gas
     function _distributeLegacyFee(
         address _network,
         uint256 _tokenRetainedByAdmin,
