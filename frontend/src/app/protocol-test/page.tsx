@@ -1,4 +1,5 @@
 "use client";
+import { TextAddressEvm } from "@/components/text/TextAddressEvm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table } from "@/components/ui/table";
@@ -39,7 +40,7 @@ const page = () => {
                 <span className="font-bold text-xl">{el?.info?.name}</span>
                 <span className="font-light">{el?.info?.symbol}</span>
               </div>,
-              el.info.admin,
+              <TextAddressEvm>{el.info.admin}</TextAddressEvm>,
               ethers.formatEther(el.info.totalSupply),
               ethers.formatEther(el.info.rules.maxSupply),
               <Button>View more</Button>,
