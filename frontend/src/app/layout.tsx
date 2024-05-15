@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
-import { AppLayout } from "@/sections/layout/AppLayout";
+import { AppProvider } from "@/sections/provider/AppProvider";
 import { cn } from "@/utils/ui";
+import { Web3Provider } from "@/sections/provider/Web3Provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +21,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={cn(inter.className, "w-screen min-h-screen")}>
-        <AppLayout>{children}</AppLayout>
+        <Web3Provider>
+          <AppProvider>{children}</AppProvider>
+        </Web3Provider>
       </body>
     </html>
   );
