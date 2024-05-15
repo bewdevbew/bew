@@ -20,7 +20,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={cn(inter.className, "w-screen min-h-screen")}>
+      <body
+        className={cn(
+          inter.className,
+          "w-screen min-h-screen flex flex-col gap-4"
+        )}
+      >
         <Web3Provider>
           <AppProvider>{children}</AppProvider>
         </Web3Provider>

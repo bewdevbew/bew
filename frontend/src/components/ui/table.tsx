@@ -1,5 +1,4 @@
 import * as React from "react";
-
 import { cn } from "@/utils/ui";
 
 const Table = React.forwardRef<
@@ -110,30 +109,47 @@ const MyTable = ({
   caption,
   footer,
   heads,
+  className = "w-full",
   body,
 }: {
   id?: string;
   footer?: string[];
   caption?: any;
+  className?: string;
   heads: any[];
-  body: any[][] | undefined;
+  body: { children: any[]; customClassName?: string }[] | undefined;
 }) => {
   return (
-    <Table>
+    <Table className={cn(className)}>
       {caption && <TableCaption>{caption}</TableCaption>}
 
       <TableHeader>
         <TableRow>
           {heads.map((head, i) => (
-            <TableHead key={`${id}-head-${i}`}>{head}</TableHead>
+            <TableHead
+              className={i === heads.length - 1 ? "text-right ml-auto" : ""}
+              key={`${id}-head-${i}`}
+            >
+              {head}
+            </TableHead>
           ))}
         </TableRow>
       </TableHeader>
       <TableBody>
         {body?.map((row, i) => (
-          <TableRow key={`${id}-body-row-${i}`}>
-            {row.map((cell, j) => (
-              <TableCell key={`${id}-body-row-${i}-cell-${j}`}>
+          <TableRow
+            className={row?.customClassName}
+            key={`${id}-body-row-${i}`}
+          >
+            {row.children.map((cell, j) => (
+              <TableCell
+                className={
+                  j === row.children.length - 1
+                    ? "flex justify-end items-center"
+                    : ""
+                }
+                key={`${id}-body-row-${i}-cell-${j}`}
+              >
                 {cell}
               </TableCell>
             ))}
