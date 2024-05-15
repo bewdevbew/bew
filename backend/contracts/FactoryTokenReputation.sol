@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import {DataTypes} from "./libraries/DataTypes.sol";
 import {MintLogic} from "./libraries/logic/MintLogic.sol";
+import {Errors} from "./libraries/helpers/Errors.sol";
 import {ProtocolConfiguration} from "./libraries/configuration/ProtocolConfiguration.sol";
 import "./TokenReputation.sol";
 import "./interfaces/ITokenReputation.sol";
@@ -19,7 +20,6 @@ contract TokenReputationFactory is Ownable {
         DataTypes.AdminRules({
             customRules: false,
             initialSupply: ProtocolConfiguration.INITIAL_SUPPLY,
-            initialChildSupply: ProtocolConfiguration.INITIAL_CHILD_SUPPLY,
             maxSupply: ProtocolConfiguration.MAX_SUPPLY,
             adminRetainedTokensPercentage: ProtocolConfiguration
                 .ADMIN_RETAINED_TOKENS_PERCENTAGE,
@@ -50,7 +50,7 @@ contract TokenReputationFactory is Ownable {
     modifier onlyExist(address _token) {
         require(
             childTokenToNetworkTokens[_token] != address(0),
-            "TokenReputationFactory: Only token can call this function"
+            Errors.CALLER_NOT_TOKEN
         );
         _;
     }
@@ -69,6 +69,12 @@ contract TokenReputationFactory is Ownable {
         );
     }
 
+    /**
+     * @notice recover rules of a token or an address for a network
+     * @param _network  is the token where another token wishes to interact
+     * @param _for is the token or address that wishes to interact with the network
+     */
+
     function rulesOf(
         address _network,
         address _for
@@ -78,10 +84,10 @@ contract TokenReputationFactory is Ownable {
         onlyExist(_network)
         returns (DataTypes.AdminRules memory rules)
     {
-        if (_for == _network) {
-            return particularRules[_network][_for];
-        } else if (particularRules[_network][_for].customRules) {
-            return particularRules[_network][_for];
+        rules = particularRules[_network][_for];
+
+        if (_for == _network || rules.customRules) {
+            return rules;
         } else {
             return standardRules;
         }
@@ -89,26 +95,13 @@ contract TokenReputationFactory is Ownable {
 
     function mint(
         address _sponsored,
-        uint256 _amount,
         string memory _name,
         string memory _symbol
-    ) public returns (address) {
-        require(
-            msg.sender == genesisToken ||
-                childTokenToNetworkTokens[msg.sender] != address(0),
-            "TokenReputationFactory: Only genesis token or child token can mint new token"
-        );
-
+    ) public onlyExist(msg.sender) returns (address) {
         DataTypes.AdminRules memory childRules = rulesOf(
             msg.sender,
             _sponsored
         );
-        if (
-            _amount != childRules.initialSupply &&
-            _amount <= childRules.maxSupply
-        ) {
-            childRules.initialSupply = _amount;
-        }
 
         DataTypes.AdminRules memory networkRules = particularRules[msg.sender][
             msg.sender
@@ -130,24 +123,22 @@ contract TokenReputationFactory is Ownable {
         networkToken.mint(networkAllocationToChild);
 
         if (tokensRetainedByAdmin > 0) {
+            // ? Voir si appliquer les legacy fee à initialSupply ou à tokensRetainedByAdmin ?
+            tokensRetainedByAdmin = _distributeLegacyFee(
+                address(networkToken),
+                tokensRetainedByAdmin,
+                childToken
+            );
             uint256 networkParticipation = (tokensRetainedByAdmin *
                 networkRules.networkParticipationPercentage) / 100;
+            address parentNetwork = childTokenToNetworkTokens[
+                address(networkToken)
+            ];
 
-            // Token really owned by owner
             childToken.transfer(
                 adminOf[msg.sender],
                 tokensRetainedByAdmin - networkParticipation
             );
-            // TODO override addReserveSponsorFromFactory
-            // Token locked on protocol. Only Network Admin and Token Admin can access
-            // require(
-            //     networkToken.transferFrom(
-            //         address(this),
-            //         address(childToken),
-            //         networkParticipation
-            //     ),
-            //     "TokenReputationFactory: Transfer failed"
-            // );
 
             childToken.approve(address(networkToken), networkParticipation);
             networkToken.addReserveSponsorFromFactory(
@@ -166,6 +157,45 @@ contract TokenReputationFactory is Ownable {
         return address(childToken);
     }
 
+    /**
+     * @notice Distribute legacy fee to all nested network
+     */
+
+    // TODO Tester le nombre d'imbrication maximum du réseau avant que cela cause des problèmes de frais de gas
+    function _distributeLegacyFee(
+        address _network,
+        uint256 _tokenRetainedByAdmin,
+        TokenReputation _iChildToken
+    ) internal returns (uint256) {
+        address currentNetwork = _network;
+        uint256 remainingFee = _tokenRetainedByAdmin - 1; // 1 token is minimum token retained by admin
+        address childToken = address(_iChildToken);
+
+        while (
+            childTokenToNetworkTokens[currentNetwork] != address(0) &&
+            currentNetwork != address(this)
+        ) {
+            uint256 legacyPercentage = currentNetwork == address(this)
+                ? standardRules.adminLegacyFeePercentage
+                : particularRules[currentNetwork][childToken]
+                    .adminLegacyFeePercentage;
+            uint256 fee = (remainingFee * legacyPercentage) / 100;
+
+            remainingFee -= fee;
+
+            if (fee > 0) {
+                _iChildToken.transfer(
+                    currentNetwork == address(this)
+                        ? owner()
+                        : adminOf[msg.sender],
+                    fee
+                );
+            }
+            currentNetwork = childTokenToNetworkTokens[currentNetwork];
+        }
+        return remainingFee + 1; // Give back 1 token to _network
+    }
+
     function _mint(
         address _owner,
         string memory _name,
@@ -174,7 +204,7 @@ contract TokenReputationFactory is Ownable {
     ) internal returns (TokenReputation) {
         require(
             tokenOf[_owner] == address(0),
-            "TokenReputationFactory: Address already have his token"
+            Errors.ADDRESS_ALREADY_OWN_TOKEN
         );
         TokenReputation newToken = new TokenReputation(
             _owner,
@@ -193,6 +223,7 @@ contract TokenReputationFactory is Ownable {
         adminOf[tokenAddress] = _owner;
         tokenOf[_owner] = tokenAddress;
 
+        _rules.customRules = true;
         // Rules are indexed in own address
         particularRules[tokenAddress][tokenAddress] = _rules;
         tokensLength += 1; // TODO check if need openzeppelin counter with latest sol version
@@ -210,10 +241,7 @@ contract TokenReputationFactory is Ownable {
         uint _amount
     ) external onlyExist(_currentPoolNetwork) onlyExist(_newPoolNetwork) {
         address tokenReputation = tokenOf[msg.sender];
-        require(
-            tokenReputation != address(0),
-            "TokenReputationFactory: Caller must admin a token"
-        );
+        require(tokenReputation != address(0), Errors.CALLER_NOT_OWN_TOKEN);
         ITokenReputation(_currentPoolNetwork).withdrawReputationFromFactory(
             tokenReputation,
             _newPoolNetwork,
@@ -222,13 +250,13 @@ contract TokenReputationFactory is Ownable {
     }
 
     function setRules(
-        address _sponsored,
-        DataTypes.AdminRules memory _rules
+        DataTypes.AdminRules memory _rules,
+        address _sponsored
     ) public {
         // TODO Permettre de modifier ses rules qui n'ont pas à être immuable
         require(
-            _sponsored != msg.sender || tokenOf[msg.sender] != _sponsored,
-            "TokenReputationFactory: Own rules can't be set"
+            _sponsored != msg.sender && tokenOf[msg.sender] != _sponsored,
+            Errors.CALLER_USE_INVALID_ARGUMENT
         );
         MintLogic.checkRules(_rules);
         address forToken;
@@ -236,11 +264,9 @@ contract TokenReputationFactory is Ownable {
             forToken = genesisToken;
         } else {
             forToken = tokenOf[msg.sender];
+            require(forToken != address(0), Errors.CALLER_NOT_OWN_TOKEN);
         }
-        require(
-            forToken != address(0),
-            "TokenReputationFactory: Rules can be set only by admin of token"
-        );
+        _rules.customRules = true;
         particularRules[forToken][_sponsored] = _rules;
     }
 }

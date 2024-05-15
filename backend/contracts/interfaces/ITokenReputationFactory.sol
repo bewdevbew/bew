@@ -8,7 +8,6 @@ interface ITokenReputationFactory {
 
     function mint(
         address _sponsored,
-        uint256 _amount,
         string memory _name,
         string memory _symbol
     ) external returns (address);
@@ -21,4 +20,9 @@ interface ITokenReputationFactory {
         address _network,
         address _for
     ) external view returns (DataTypes.AdminRules memory rules);
+
+    function setRules(
+        DataTypes.AdminRules memory _rules,
+        address _sponsored
+    ) external;
 }

@@ -20,7 +20,7 @@ const deployContract = async () => {
 
 const getChildToken = async (address: `0x${string}`) => {
   const Token = await hre.ethers.getContractFactory("TokenReputation");
-  return Token.attach(address) as TokenReputation;
+  return Token.attach(address) as unknown as TokenReputation;
 };
 
 describe("TokenReputation", function () {
@@ -29,16 +29,16 @@ describe("TokenReputation", function () {
   let owner: Signer;
   let addr1: Signer;
   let randomAddr: Signer;
+  let randomAddr1: Signer;
   this.beforeEach(async () => {
-    [owner, addr1, randomAddr] = await hre.ethers.getSigners(); // owner == accounts[0] | addr1 == accounts[1] | addr2 == accounts[2]
+    [owner, addr1, randomAddr, randomAddr1] = await hre.ethers.getSigners(); // owner == accounts[0] | addr1 == accounts[1] | addr2 == accounts[2]
 
     let contracts = await deployContract();
     token = contracts.token;
-    factory = contracts.factory;
+    factory = contracts.factory as any;
   });
 
   let onboardParticipant = async ({
-    childSupply = "100",
     participant = addr1,
     caller = owner,
   }: {
@@ -47,7 +47,6 @@ describe("TokenReputation", function () {
     caller?: Signer;
   }) => {
     return await ctrl.onboardParticipant({
-      childSupply,
       participant: (await participant.getAddress()) as `0x${string}`,
       token,
       caller,
@@ -460,7 +459,7 @@ describe("TokenReputation", function () {
               await childToken.getAddress(),
               100
             )
-        ).to.be.revertedWith(ERRORS.withdrawAuth);
+        ).to.be.revertedWith(ERRORS.CALLER_CANT_USE_FUNCTION);
       });
 
       it("Should revert if token balance is less than amount", async function () {
@@ -474,7 +473,7 @@ describe("TokenReputation", function () {
             await childToken.getAddress(),
             balancePool + 1n
           )
-        ).to.be.revertedWith(ERRORS.insufficientBalance);
+        ).to.be.revertedWith(ERRORS.INSUFFICIENT_BALANCE);
       });
 
       it("Should revert if token  wasn't on pool", async () => {
@@ -484,7 +483,7 @@ describe("TokenReputation", function () {
             "0xD13c7342e1ef687C5ad21b27c2b65D772cAb5C8c",
             100
           )
-        ).to.be.revertedWith(ERRORS.insufficientBalance);
+        ).to.be.revertedWith(ERRORS.INSUFFICIENT_BALANCE);
       });
     });
   });
@@ -641,7 +640,7 @@ describe("TokenReputation", function () {
               await token.getAddress(),
               1
             )
-        ).to.be.revertedWith(ERRORS.onlyAdminFactory);
+        ).to.be.revertedWith(ERRORS.CALLER_NOT_OWN_TOKEN);
       });
 
       it("Should revert if pool balance is less than amount", async function () {
@@ -653,7 +652,7 @@ describe("TokenReputation", function () {
               await token.getAddress(),
               BigInt(amount) + 1n
             )
-        ).to.be.revertedWith(ERRORS.insufficientBalance);
+        ).to.be.revertedWith(ERRORS.INSUFFICIENT_BALANCE);
       });
 
       it("Should revert if token  wasn't on pool", async () => {
@@ -665,43 +664,660 @@ describe("TokenReputation", function () {
               await token.getAddress(),
               amount
             )
-        ).to.be.revertedWith(ERRORS.notToken);
+        ).to.be.revertedWith(ERRORS.CALLER_NOT_TOKEN);
       });
     });
   });
 
-  describe.only("Set Rules", function () {
-    it("Should set rules for address", async () => {
-      let newRules = {
-        customRules: true,
-        initialSupply: 1000000n * 10n ** 18n,
-        maxSupply: 20000000n * 10n ** 18n,
-        initialChildSupply: 1000n * 10n ** 18n,
-        sponsorTokenRequirement: 70,
-        adminRetainedTokensPercentage: 10,
-        networkParticipationPercentage: 20,
-        networkToChildAllocationPercentage: 30,
-        adminLegacyFeePercentage: 40,
-        adminRevokeFeePercentage: 50,
-        governancePercentageToTokensPercentage: 60,
-      };
-      await factory.setRules(await randomAddr.getAddress(), newRules);
+  describe("Set Rules", function () {
+    let newRules: DataTypes.AdminRulesStruct;
+    let MAX_SUPPLY = 20999999n * 10n ** 18n;
+    this.beforeEach(async () => {
+      newRules = {
+        customRules: false,
+        initialSupply: MAX_SUPPLY / 2n - 1n,
+        maxSupply: MAX_SUPPLY,
 
-      // expect(await token.rules()).to.be.equal(newRules);
+        sponsorTokenRequirement: 100000n * 10n ** 18n,
+        adminRetainedTokensPercentage: 1,
+        networkParticipationPercentage: 1,
+        networkToChildAllocationPercentage: 1,
+        adminLegacyFeePercentage: 1,
+        adminRevokeFeePercentage: 1,
+        governancePercentageToTokensPercentage: 1,
+      };
+    });
+
+    it("Should set custom rules to true", async () => {
+      await factory.setRules(newRules, await randomAddr.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr.getAddress()
+          )
+        ).customRules
+      ).to.be.equal(true);
+    });
+
+    it("Should modify the initial supply", async () => {
+      await factory.setRules(newRules, await randomAddr.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr.getAddress()
+          )
+        ).initialSupply
+      ).to.be.equal(newRules.initialSupply);
+      (newRules = { ...newRules, initialSupply: 1n }),
+        await factory.setRules(newRules, await randomAddr1.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr1.getAddress()
+          )
+        ).initialSupply
+      ).to.be.equal(newRules.initialSupply);
+    });
+    it("Should modify the max supply", async () => {
+      await factory.setRules(newRules, await randomAddr.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr.getAddress()
+          )
+        ).maxSupply
+      ).to.be.equal(newRules.maxSupply);
+
+      newRules = {
+        ...newRules,
+        initialSupply: 1n * 10n ** 18n,
+        maxSupply: 2n * 10n ** 18n,
+      };
+      await factory.setRules(newRules, await randomAddr1.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr1.getAddress()
+          )
+        ).initialSupply
+      ).to.be.equal(newRules.initialSupply);
+    });
+
+    it("Should modify the max supply", async () => {
+      await factory.setRules(newRules, await randomAddr.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr.getAddress()
+          )
+        ).maxSupply
+      ).to.be.equal(newRules.maxSupply);
+
+      newRules = {
+        ...newRules,
+        initialSupply: 1n * 10n ** 18n,
+        maxSupply: 2n * 10n ** 18n,
+      };
+      await factory.setRules(newRules, await randomAddr1.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr1.getAddress()
+          )
+        ).initialSupply
+      ).to.be.equal(newRules.initialSupply);
+    });
+
+    it("Should modify the sponsor token requirement", async () => {
+      await factory.setRules(newRules, await randomAddr.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr.getAddress()
+          )
+        ).sponsorTokenRequirement
+      ).to.be.equal(newRules.sponsorTokenRequirement);
+
+      newRules = {
+        ...newRules,
+        sponsorTokenRequirement: 1n * 10n ** 18n,
+      };
+      await factory.setRules(newRules, await randomAddr1.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr1.getAddress()
+          )
+        ).sponsorTokenRequirement
+      ).to.be.equal(newRules.sponsorTokenRequirement);
+    });
+    it("Should modify the admin retained tokens percentage", async () => {
+      await factory.setRules(newRules, await randomAddr.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr.getAddress()
+          )
+        ).adminRetainedTokensPercentage
+      ).to.be.equal(newRules.adminRetainedTokensPercentage);
+
+      newRules = {
+        ...newRules,
+        adminRetainedTokensPercentage: 49,
+      };
+      await factory.setRules(newRules, await randomAddr1.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr1.getAddress()
+          )
+        ).adminRetainedTokensPercentage
+      ).to.be.equal(newRules.adminRetainedTokensPercentage);
+    });
+
+    it("Should modify the network participation percentage", async () => {
+      await factory.setRules(newRules, await randomAddr.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr.getAddress()
+          )
+        ).networkParticipationPercentage
+      ).to.be.equal(newRules.networkParticipationPercentage);
+
+      newRules = {
+        ...newRules,
+        networkParticipationPercentage: 100,
+      };
+      await factory.setRules(newRules, await randomAddr1.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr1.getAddress()
+          )
+        ).networkParticipationPercentage
+      ).to.be.equal(newRules.networkParticipationPercentage);
+    });
+
+    it("Should modify the network to child allocation percentage", async () => {
+      await factory.setRules(newRules, await randomAddr.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr.getAddress()
+          )
+        ).networkToChildAllocationPercentage
+      ).to.be.equal(newRules.networkToChildAllocationPercentage);
+
+      newRules = {
+        ...newRules,
+        networkToChildAllocationPercentage: 100,
+      };
+      await factory.setRules(newRules, await randomAddr1.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr1.getAddress()
+          )
+        ).networkToChildAllocationPercentage
+      ).to.be.equal(newRules.networkToChildAllocationPercentage);
+    });
+
+    it("Should modify the admin legacy fee percentage", async () => {
+      await factory.setRules(newRules, await randomAddr.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr.getAddress()
+          )
+        ).adminLegacyFeePercentage
+      ).to.be.equal(newRules.adminLegacyFeePercentage);
+
+      newRules = {
+        ...newRules,
+        adminLegacyFeePercentage: 49,
+      };
+      await factory.setRules(newRules, await randomAddr1.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr1.getAddress()
+          )
+        ).adminLegacyFeePercentage
+      ).to.be.equal(newRules.adminLegacyFeePercentage);
+    });
+
+    it("Should modify the admin revoke fee percentage", async () => {
+      await factory.setRules(newRules, await randomAddr.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr.getAddress()
+          )
+        ).adminRevokeFeePercentage
+      ).to.be.equal(newRules.adminRevokeFeePercentage);
+
+      newRules = {
+        ...newRules,
+        adminRevokeFeePercentage: 100,
+      };
+      await factory.setRules(newRules, await randomAddr1.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr1.getAddress()
+          )
+        ).adminRevokeFeePercentage
+      ).to.be.equal(newRules.adminRevokeFeePercentage);
+    });
+
+    it("Should modify the governance percentage to tokens percentage", async () => {
+      await factory.setRules(newRules, await randomAddr.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr.getAddress()
+          )
+        ).governancePercentageToTokensPercentage
+      ).to.be.equal(newRules.governancePercentageToTokensPercentage);
+
+      newRules = {
+        ...newRules,
+        governancePercentageToTokensPercentage: 100,
+      };
+      await factory.setRules(newRules, await randomAddr1.getAddress());
+      expect(
+        (
+          await factory.rulesOf(
+            await token.getAddress(),
+            await randomAddr1.getAddress()
+          )
+        ).governancePercentageToTokensPercentage
+      ).to.be.equal(newRules.governancePercentageToTokensPercentage);
+    });
+
+    describe("NOT WORKS", function () {
+      it("Should revert if caller havn't token", async function () {
+        await expect(
+          factory
+            .connect(randomAddr)
+            .setRules(newRules, await token.getAddress())
+        ).to.be.revertedWith(ERRORS.CALLER_NOT_OWN_TOKEN);
+      });
+
+      it("Should revert if initial supply is greater than max supply / 2", async () => {
+        newRules = { ...newRules, initialSupply: MAX_SUPPLY / 2n + 1n };
+        await expect(
+          factory.setRules(newRules, await randomAddr.getAddress())
+        ).to.be.revertedWith(ERRORS.INVALID_SUPPLY);
+        newRules = { ...newRules, initialSupply: 2, maxSupply: 3 };
+        await expect(
+          factory.setRules(newRules, await randomAddr.getAddress())
+        ).to.be.revertedWith(ERRORS.INVALID_SUPPLY);
+      });
+
+      it("Should revert if max supply is lower than initialSupply", async () => {
+        newRules = {
+          ...newRules,
+          maxSupply: BigInt(newRules.initialSupply) - 1n,
+        };
+        await expect(
+          factory.setRules(newRules, await randomAddr.getAddress())
+        ).to.be.revertedWith(ERRORS.INVALID_SUPPLY);
+      });
+
+      it("Should revert if max supply is greater than MAX_SUPPLY", async () => {
+        newRules = {
+          ...newRules,
+          maxSupply: 21000000n * 10n ** 18n + 1n,
+        };
+        await expect(
+          factory.setRules(newRules, await randomAddr.getAddress())
+        ).to.be.revertedWith(ERRORS.INVALID_SUPPLY);
+      });
+
+      it("Should revert if admin retained tokens % is greater than MAX_ADMIN_RETAINED_TOKENS_PERCENTAGE", async () => {
+        newRules = {
+          ...newRules,
+          adminRetainedTokensPercentage: 50,
+        };
+        await expect(
+          factory.setRules(newRules, await randomAddr.getAddress())
+        ).to.be.revertedWith(ERRORS.INVALID_RETAINED_PERCENTAGE);
+      });
+
+      it("Should revert if network participation % is greater than MAX_NETWORK_PARTICIPATION_PERCENTAGE", async () => {
+        newRules = {
+          ...newRules,
+          networkParticipationPercentage: 101,
+        };
+        await expect(
+          factory.setRules(newRules, await randomAddr.getAddress())
+        ).to.be.revertedWith(ERRORS.INVALID_NETWORK_PARTICIPATION_PERCENTAGE);
+      });
+
+      it("Should revert if admin legacy fee % is greater than MAX_ADMIN_LEGACY_FEE_PERCENTAGE", async () => {
+        newRules = {
+          ...newRules,
+          adminLegacyFeePercentage: 50,
+        };
+        await expect(
+          factory.setRules(newRules, await randomAddr.getAddress())
+        ).to.be.revertedWith(ERRORS.INVALID_LEGACY_FEE_PERCENTAGE);
+      });
+
+      it("Should revert if admin revoke fee % is greater than MAX_ADMIN_REVOKE_FEE_PERCENTAGE", async () => {
+        newRules = {
+          ...newRules,
+          adminRevokeFeePercentage: 101,
+        };
+        await expect(
+          factory.setRules(newRules, await randomAddr.getAddress())
+        ).to.be.revertedWith(ERRORS.INVALID_REVOKE_FEE_PERCENTAGE);
+      });
     });
   });
-  // describe("Deposit token reputation", () => {
-  //   let childToken: TokenReputation;
-  //   this.beforeEach(async () => {
-  //     expect(await factory.tokenOf(await addr1.getAddress())).to.be.equal(
-  //       ethers.ZeroAddress
-  //     );
-  //     const { child, to, amount } = await onboardParticipant({});
-  //     childToken = await getChildToken(child);
-  //   });
 
-  //
-  // });
+  describe("withdrawReputation", function () {
+    it("Should update pool after withdraw", async () => {
+      let balancePool = await token.poolTokensReputation(
+        await token.getAddress()
+      );
+      await token.withdrawReputation(balancePool);
+      expect(
+        await token.poolTokensReputation(await token.getAddress())
+      ).to.be.equal(0);
+    });
+
+    it("Should admin receive token", async () => {
+      let balance = await token.balanceOf(await owner.getAddress());
+      let balancePool = await token.poolTokensReputation(
+        await token.getAddress()
+      );
+      await token.withdrawReputation(balancePool);
+      expect(await token.balanceOf(await owner.getAddress())).to.be.equal(
+        balance + balancePool
+      );
+    });
+
+    it("Should reduce balance of contract", async () => {
+      let balance = await token.balanceOf(await token.getAddress());
+      let balancePool = await token.poolTokensReputation(
+        await token.getAddress()
+      );
+      await token.withdrawReputation(balancePool);
+      expect(await token.balanceOf(await token.getAddress())).to.be.equal(
+        balance - balancePool
+      );
+    });
+
+    it("Should admin receive fee token if token != address(this)", async () => {
+      let { child } = await onboardParticipant({});
+      let childToken = await getChildToken(child);
+      let balance = await childToken.balanceOf(await owner.getAddress());
+      let balancePool = await token.poolTokensReputation(
+        await childToken.getAddress()
+      );
+      await token.connect(addr1).withdrawReputation(balancePool);
+      let rules = await factory.rulesOf(
+        await token.getAddress(),
+        await childToken.getAddress()
+      );
+      expect(await childToken.balanceOf(await owner.getAddress())).to.be.equal(
+        balance + (balancePool * rules.adminRevokeFeePercentage) / 100n
+      );
+    });
+
+    describe("NOT WORKS", function () {
+      it("Should revert if caller is not the admin of the token", async () => {
+        await expect(
+          token.connect(randomAddr).withdrawReputation(100)
+        ).to.be.revertedWith(ERRORS.CALLER_NOT_OWN_TOKEN);
+      });
+
+      it("Should revert if pool balance is less than amount", async () => {
+        let { child } = await onboardParticipant({});
+        let balancePool = await token.poolTokensReputation(child);
+        await expect(
+          token.connect(addr1).withdrawReputation(balancePool + 1n)
+        ).to.be.revertedWith(ERRORS.INSUFFICIENT_BALANCE);
+      });
+    });
+  });
+
+  describe("transferReputationByAdmin", function () {
+    let childToken: TokenReputation;
+
+    this.beforeEach(async () => {
+      expect(await factory.tokenOf(await addr1.getAddress())).to.be.equal(
+        ethers.ZeroAddress
+      );
+      const { child, to, amount } = await onboardParticipant({});
+      childToken = await getChildToken(child);
+      let balancePool = await childToken.poolTokensReputation(
+        await childToken.getAddress()
+      );
+      await factory
+        .connect(addr1)
+        .transferTokenToAnotherPool(
+          await childToken.getAddress(),
+          await token.getAddress(),
+          balancePool
+        );
+      expect(await token.poolTokensReputation(child)).to.be.gte(balancePool);
+    });
+
+    it("Should send reputation to any address", async () => {
+      let balanceBefore = await childToken.balanceOf(
+        await randomAddr.getAddress()
+      );
+      let balancePool = await token.poolTokensReputation(
+        await childToken.getAddress()
+      );
+
+      await token.transferReputationByAdmin(
+        await childToken.getAddress(),
+        await randomAddr.getAddress(),
+        balancePool
+      );
+
+      expect(
+        await childToken.balanceOf(await randomAddr.getAddress())
+      ).to.be.equal(balanceBefore + balancePool);
+    });
+
+    it("Should reduce reputation pool", async () => {
+      let balancePool = await token.poolTokensReputation(
+        await childToken.getAddress()
+      );
+      await token.transferReputationByAdmin(
+        await childToken.getAddress(),
+        await randomAddr.getAddress(),
+        balancePool
+      );
+      expect(
+        await token.poolTokensReputation(await childToken.getAddress())
+      ).to.be.equal(0);
+    });
+
+    it("Should reduce balance of contract", async () => {
+      let amount = 10n;
+      let balance = await childToken.balanceOf(await token.getAddress());
+
+      await token.transferReputationByAdmin(
+        await childToken.getAddress(),
+        await randomAddr.getAddress(),
+        amount
+      );
+
+      expect(await childToken.balanceOf(await token.getAddress())).to.be.equal(
+        balance - amount
+      );
+    });
+
+    describe("NOT WORKS", function () {
+      it("Should revert if caller isn't admin of contract", async () => {
+        await expect(
+          token
+            .connect(addr1)
+            .transferReputationByAdmin(
+              await childToken.getAddress(),
+              await randomAddr.getAddress(),
+              1
+            )
+        ).to.be.revertedWith(ERRORS.CALLER_NOT_ADMIN);
+      });
+
+      it("Should revert if pool tokens reputation is lower than amount", async () => {
+        let balancePool = await token.poolTokensReputation(
+          await childToken.getAddress()
+        );
+        await expect(
+          token.transferReputationByAdmin(
+            await childToken.getAddress(),
+            await randomAddr.getAddress(),
+            balancePool + 1n
+          )
+        ).to.be.revertedWith(ERRORS.INSUFFICIENT_BALANCE);
+      });
+    });
+  });
+
+  describe("transferOnPoolReputation", function () {
+    let childToken: TokenReputation;
+
+    this.beforeEach(async () => {
+      const { child, to, amount } = await onboardParticipant({});
+      childToken = await getChildToken(child);
+      let balancePool = await childToken.poolTokensReputation(
+        await childToken.getAddress()
+      );
+
+      expect(balancePool).to.be.lte(
+        await childToken.balanceOf(await childToken.getAddress())
+      );
+
+      expect(balancePool).to.be.gt(0);
+      await childToken.connect(addr1).withdrawReputation(balancePool);
+
+      expect(await childToken.balanceOf(await addr1.getAddress())).to.be.gte(
+        balancePool
+      );
+    });
+
+    it("Should send reputation to POOL REPUTATION", async () => {
+      let balancePool = await token.poolTokensReputation(
+        await childToken.getAddress()
+      );
+
+      let balance = await childToken.balanceOf(await addr1.getAddress());
+      await childToken
+        .connect(addr1)
+        .transferOnPoolReputation(await token.getAddress(), balance);
+      expect(
+        await token.poolTokensReputation(await childToken.getAddress())
+      ).to.be.equal(balancePool + balance);
+    });
+
+    it("Should increase balance of contract", async () => {
+      let balanceContract = await childToken.balanceOf(
+        await token.getAddress()
+      );
+
+      let balance = await childToken.balanceOf(await addr1.getAddress());
+      await childToken
+        .connect(addr1)
+        .transferOnPoolReputation(await token.getAddress(), balance);
+      expect(await childToken.balanceOf(await token.getAddress())).to.be.equal(
+        balanceContract + balance
+      );
+    });
+
+    describe("NOT WORKS", function () {
+      it("Should revert if caller haven't token", async () => {
+        await expect(
+          childToken
+            .connect(randomAddr)
+            .transferOnPoolReputation(await token.getAddress(), 1)
+        ).to.be.reverted;
+      });
+
+      it("Should revert if balance of caller is less than amount", async () => {
+        let balance = await childToken.balanceOf(await addr1.getAddress());
+        await expect(
+          childToken
+            .connect(addr1)
+            .transferOnPoolReputation(await token.getAddress(), balance + 1n)
+        ).to.be.revertedWith(ERRORS.INSUFFICIENT_BALANCE);
+      });
+
+      it("Should revert if token haven't access of NETWORK");
+    });
+  });
+
+  describe("Governance", function () {
+    describe("DepositOnGovernance", function () {
+      describe("ETH", function () {
+        it("Should deposit ETH on contract", async function () {
+          let amount = 1n * 10n ** 18n;
+          const balance = await ethers.provider.getBalance(
+            await token.getAddress()
+          );
+          await token.depositETHOnGovernance({ value: amount });
+          expect(
+            await ethers.provider.getBalance(await token.getAddress())
+          ).to.be.equal(balance + amount);
+        });
+
+        it("Should update pool governance", async function () {
+          let amount = 1n * 10n ** 18n;
+          let balanceGovernance = await token.poolTokensForGovernance(
+            ethers.ZeroAddress
+          );
+          await token.depositETHOnGovernance({ value: amount });
+          expect(
+            await token.poolTokensForGovernance(ethers.ZeroAddress)
+          ).to.be.equal(balanceGovernance + amount);
+        });
+
+        describe("NOT WORKS", function () {
+          it("Should revert if value == 0", async () => {
+            await expect(token.depositETHOnGovernance()).to.be.revertedWith(
+              ERRORS.AMOUNT_CANT_BE_ZERO
+            );
+          });
+
+          it("Should revert if value > balance", async () => {
+            let balance = await ethers.provider.getBalance(
+              await owner.getAddress()
+            );
+            await expect(token.depositETHOnGovernance({ value: balance + 1n }))
+              .to.be.rejected;
+          });
+        });
+      });
+    });
+  });
 
   describe("Engage reputation", function () {
     let childToken: TokenReputation;

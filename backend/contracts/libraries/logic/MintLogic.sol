@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 import {DataTypes} from "../DataTypes.sol";
 import {ProtocolConfiguration} from "../configuration/ProtocolConfiguration.sol";
+import {Errors} from "../helpers/Errors.sol";
 import "../../interfaces/ITokenReputation.sol";
 import "../../TokenReputation.sol";
 library MintLogic {
@@ -9,34 +10,32 @@ library MintLogic {
         DataTypes.AdminRules memory _rules
     ) internal pure returns (bool) {
         require(
-            _rules.initialSupply <= ProtocolConfiguration.MAX_SUPPLY / 2,
-            "MintLogic: Initial supply must be lower than 50% of MAX_SUPPLY"
+            _rules.initialSupply <= _rules.maxSupply / 2,
+            Errors.INVALID_SUPPLY
         );
         require(
-            _rules.initialChildSupply <=
-                ProtocolConfiguration.MAX_INITIAL_SUPPLY,
-            "MintLogic: Initial child supply must be lower than MAX_INITIAL_SUPPLY"
+            _rules.maxSupply <= ProtocolConfiguration.MAX_SUPPLY,
+            Errors.INVALID_SUPPLY
         );
-
         require(
             _rules.adminRetainedTokensPercentage <=
                 ProtocolConfiguration.MAX_ADMIN_RETAINED_TOKENS_PERCENTAGE,
-            "MintLogic: Admin retained tokens percentage must be less than max admin retained tokens percentage"
+            Errors.INVALID_RETAINED_PERCENTAGE
         );
         require(
             _rules.networkParticipationPercentage <=
                 ProtocolConfiguration.MAX_NETWORK_PARTICIPATION_PERCENTAGE,
-            "MintLogic: Network participation percentage must be less than max network participation percentage"
+            Errors.INVALID_NETWORK_PARTICIPATION_PERCENTAGE
         );
         require(
             _rules.adminLegacyFeePercentage <=
                 ProtocolConfiguration.MAX_ADMIN_LEGACY_FEE_PERCENTAGE,
-            "MintLogic: Admin legacy fee percentage must be less than max admin legacy fee percentage"
+            Errors.INVALID_LEGACY_FEE_PERCENTAGE
         );
         require(
             _rules.adminRevokeFeePercentage <=
                 ProtocolConfiguration.MAX_ADMIN_REVOKE_FEE_PERCENTAGE,
-            "MintLogic: Admin revoke fee percentage must be less than max admin revoke fee percentage"
+            Errors.INVALID_REVOKE_FEE_PERCENTAGE
         );
         return true;
     }

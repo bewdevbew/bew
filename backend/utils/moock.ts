@@ -9,7 +9,6 @@ export const MOOCKS = {
   rules: {
     customRules: false,
     initialSupply: 1000000n * 10n ** 18n,
-    initialChildSupply: 1000n * 10n ** 18n,
     maxSupply: 21000000n * 10n ** 18n,
     adminRetainedTokensPercentage: 5,
     networkParticipationPercentage: 30,

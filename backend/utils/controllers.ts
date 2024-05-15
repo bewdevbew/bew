@@ -6,7 +6,6 @@ import { DataTypes } from "../typechain-types/contracts/TokenReputation";
 import { token } from "../typechain-types/factories/@openzeppelin/contracts";
 
 export const onboardParticipant = async ({
-  childSupply = "100",
   participant,
   token,
   name = "ADMIN SECRET",
@@ -17,17 +16,12 @@ export const onboardParticipant = async ({
   caller?: Signer;
   token: TokenReputation;
   symbol?: string;
-  childSupply?: `${number}`;
+
   participant: `0x${string}`;
 }) => {
   let tx = await token
     .connect(caller)
-    .onboardParticipant(
-      ethers.parseEther(childSupply),
-      participant,
-      name,
-      symbol
-    );
+    .onboardParticipant(participant, name, symbol);
 
   const receipt = await tx.wait();
   const filter = token.filters.NewTokenOnboarded();

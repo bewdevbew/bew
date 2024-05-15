@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/ITokenReputation.sol";
 import "./interfaces/ITokenReputationFactory.sol";
 import {DataTypes} from "./libraries/DataTypes.sol";
+import {Events} from "./libraries/Events.sol";
+import {Errors} from "./libraries/helpers/Errors.sol";
 // TODO corriger l'énorme faille de sécurité du _owner dans le constructeur.
 // TODO corriger l'énorme faille de sécurité du sponsor if TokenNetwork est dans la pool token reputation du smart contract
 //! Inscrire la preuve dans la factory
@@ -25,19 +27,27 @@ contract TokenReputation is ERC20, Ownable {
     ITokenReputationFactory immutable iFactory;
     uint256 public immutable MAX_SUPPLY;
 
-    // ! rules now is store on factory
-    // DataTypes.AdminRules public rules;
+    uint256 public constant AIRDROP_DELAY = 30 days;
 
     mapping(address => uint256) public poolTokensForGovernance;
     mapping(address => uint256) public poolTokensReputation;
     mapping(address => mapping(address => uint256)) public poolTokensForSponsor;
     mapping(address => DataTypes.AdminRules) public particularRules;
     mapping(address => bool) public isBanned;
+    mapping(address => mapping(address => uint256)) public lastAirdropClaimed;
 
     modifier onlyFactory() {
+        require(msg.sender == factory, Errors.CALLER_NOT_FACTORY);
+        _;
+    }
+
+    // TODO Permettre l'acces au réseau à tout les tokens où le réseau est lui même intégré à ses tokens
+    modifier onlyAllowed(address _network, address _token) {
         require(
-            msg.sender == factory,
-            "TokenReputation: Caller must be factory"
+            poolTokensReputation[_network] > 0 ||
+                poolTokensForSponsor[_network][_token] > 0 ||
+                poolTokensForSponsor[address(this)][_network] > 0,
+            Errors.NETWORK_NOT_ALLOWED
         );
         _;
     }
@@ -46,7 +56,7 @@ contract TokenReputation is ERC20, Ownable {
         // TODO Faire une fonction dans la factory pour révoquer l'admin si balanceOf(caller) a > totalSupply/2
         require(
             iFactory.adminOf(_token) == msg.sender,
-            "TokenReputation: Caller must be admin of the token"
+            Errors.CALLER_NOT_ADMIN
         );
         _;
     }
@@ -59,7 +69,7 @@ contract TokenReputation is ERC20, Ownable {
         } else {
             balance = poolTokensReputation[msg.sender];
         }
-        require(balance > _value, "Not enough tokens to access this function");
+        require(balance > _value, Errors.INSUFFICIENT_BALANCE);
         _;
     }
 
@@ -102,7 +112,6 @@ contract TokenReputation is ERC20, Ownable {
 
     /**
      * @dev Function to mint a new token reputation for a participant
-     * @param _amount The initial supply of the new token reputation
      * @param _for The address of the participant to mint the token for
      * @param _name The name of the new token reputation
      * @param _symbol The symbol of the new token reputation
@@ -110,32 +119,55 @@ contract TokenReputation is ERC20, Ownable {
      */
 
     function onboardParticipant(
-        uint256 _amount,
         address _for,
         string calldata _name,
         string calldata _symbol
     ) public onlyAdminOf(address(this)) returns (address) {
-        address newToken = iFactory.mint(_for, _amount, _name, _symbol);
-        if (isBanned[_for]) {
-            isBanned[_for] = false;
-        }
-        legacyLength += 1;
-        emit NewTokenOnboarded(address(newToken), _for, _amount);
-        return newToken;
+        return _onboardParticipant(_for, _name, _symbol);
     }
 
-    // function commitTokenReputationFromFactory(
-    //     uint256 _amount,
-    //     address _token
-    // ) public onlyFactory returns (bool) {
-    //     return _commitTokenReputation(_amount, msg.sender, _token);
-    // }
-    // // function commitTokenReputation(
-    // //     uint256 _amount,
-    // //     address _token
-    // // ) public onlySponsorFor(_token, _amount) returns (bool) {
-    // //     return _commitTokenReputation(_amount, msg.sender, _token);
-    // // }
+    /**
+     * @dev Function to mint a new token reputation for a participant
+     * @param _for The address of the participant to mint the token for
+     * @param _name The name of the new token reputation
+     * @param _symbol The symbol of the new token reputation
+     * @return The address of the new token reputation
+     */
+
+    function onboardCustomParticipant(
+        address _for,
+        uint256 _initialSupply,
+        uint256 _maxSupply,
+        string calldata _name,
+        string calldata _symbol
+    ) public onlyAdminOf(address(this)) returns (address) {
+        DataTypes.AdminRules memory _rules = iFactory.rulesOf(
+            address(this),
+            _for
+        );
+
+        _rules.initialSupply = _initialSupply;
+        _rules.maxSupply = _maxSupply;
+
+        iFactory.setRules(_rules, _for);
+        return _onboardParticipant(_for, _name, _symbol);
+    }
+
+    function _onboardParticipant(
+        address _for,
+        string calldata _name,
+        string calldata _symbol
+    ) internal returns (address) {
+        address newToken = iFactory.mint(_for, _name, _symbol);
+        isBanned[_for] = false;
+        legacyLength += 1;
+        emit NewTokenOnboarded(
+            address(newToken),
+            _for,
+            iFactory.rulesOf(address(this), _for).initialSupply
+        );
+        return newToken;
+    }
 
     function _findRules(
         address _for
@@ -146,7 +178,7 @@ contract TokenReputation is ERC20, Ownable {
     function mint(uint _amount) public onlyFactory {
         require(
             MAX_SUPPLY >= totalSupply() + _amount,
-            "TokenReputation: can't overflow MAX_SUPPLY"
+            Errors.OVERFLOW_MAX_SUPPLY
         );
         _mint(factory, _amount);
     }
@@ -160,44 +192,15 @@ contract TokenReputation is ERC20, Ownable {
             msg.sender == _sponsor ||
                 iFactory.adminOf(_erc20) == msg.sender ||
                 iFactory.adminOf(_sponsor) == msg.sender,
-            "TokenReputation: Caller must be sponsor or admin of the token"
+            Errors.CALLER_CANT_USE_FUNCTION
         );
         require(
             poolTokensForSponsor[_sponsor][_erc20] >= _amount,
-            "TokenReputation: Not enough tokens to access this function"
+            Errors.INSUFFICIENT_BALANCE
         );
         poolTokensForSponsor[_sponsor][_erc20] -= _amount;
         ERC20(_erc20).transfer(msg.sender, _amount);
     }
-
-    // ! CHECK
-    // function _commitTokenReputation(
-    //     uint256 _amount,
-    //     address _token
-    // ) internal returns (bool isAllowed) {
-    //     ITokenReputation iToken = ITokenReputation(_token);
-    //     require(
-    //         !isBanned[_token] || iToken.poolTokensReputation(_for) > 0,
-    //         "Not right to access this function"
-    //     );
-    //     DataTypes.AdminRules memory _rules = findRules(address(iToken));
-
-    //     uint256 participationReciprocalRate = iToken.poolTokensReputation(
-    //         source
-    //     );
-    //     uint256 checkSponsoredBalance = iToken.balanceOf(_token);
-    //     require(
-    //         _rules.sponsorTokenRequirement < checkSponsoredBalance &&
-    //             _for != source,
-    //         "Not enough tokens to access this function"
-    //     );
-
-    //     // TODO: Send commit fee to poolReputation
-
-    //     poolTokensReputation[_for] += _amount;
-    //     transfer(_for, _amount);
-    //     if (isAllowed) {}
-    // }
 
     function addReserveSponsorFromFactory(
         address _for,
@@ -216,9 +219,40 @@ contract TokenReputation is ERC20, Ownable {
         address _erc20,
         uint256 _amount
     ) internal {
-        require(_amount > 0, "TokenReputation: Amount must be greater than 0");
+        require(_amount > 0, Errors.AMOUNT_CANT_BE_ZERO);
         require(ERC20(_erc20).transferFrom(factory, address(this), _amount));
         poolTokensForSponsor[_for][_erc20] += _amount;
+    }
+
+    function depositOnGovernance(address _erc20, uint _amount) external {
+        require(ERC20(_erc20).transferFrom(msg.sender, address(this), _amount));
+        poolTokensForGovernance[_erc20] += _amount;
+        emit Events.DepositOnGovernance(msg.sender, _erc20, _amount);
+    }
+
+    // ? Ouvrir la pool réputation si msg.value > 0
+    function depositETHOnGovernance() external payable {
+        require(msg.value > 0, Errors.AMOUNT_CANT_BE_ZERO);
+        poolTokensForGovernance[address(0)] += msg.value;
+        emit Events.DepositOnGovernance(msg.sender, address(0), msg.value);
+    }
+
+    function claimAirdrop(address _erc20) external {
+        require(poolTokensReputation[_erc20] > 0, Errors.INSUFFICIENT_BALANCE);
+        require(
+            lastAirdropClaimed[msg.sender][_erc20] + AIRDROP_DELAY <
+                block.timestamp,
+            Errors.CALLER_CANT_USE_FUNCTION
+        );
+        lastAirdropClaimed[msg.sender][_erc20] = block.timestamp;
+        // TODO Faire en fonction du token price
+        uint256 amount = poolTokensReputation[_erc20] / 100;
+        poolTokensReputation[_erc20] -= amount;
+        if (_erc20 == address(0)) {
+            payable(msg.sender).transfer(amount);
+        } else {
+            ERC20(_erc20).transfer(msg.sender, amount);
+        }
     }
 
     /**
@@ -227,18 +261,32 @@ contract TokenReputation is ERC20, Ownable {
      * @param _amount can be smaller than withdrawReputationFromFactory in case of admin fee
      */
     function depositReputation(uint256 _amount) public returns (bool) {
-        require(!isBanned[msg.sender], "TokenReputation: Caller is banned");
+        return _depositReputation(msg.sender, _amount);
+    }
+
+    function depositReputationFromWallet(
+        address _from,
+        uint _amount
+    ) public returns (bool) {
+        return _depositReputation(_from, _amount);
+    }
+
+    function _depositReputation(
+        address _from,
+        uint256 _amount
+    ) public returns (bool) {
+        require(!isBanned[msg.sender], Errors.CALLER_IS_BANNED);
         require(
             iFactory.adminOf(msg.sender) != address(0),
-            "TokenReputation: Caller must be token"
+            Errors.CALLER_NOT_TOKEN
         );
-        require(_amount > 0, "TokenReputation: Amount must be greater than 0");
+        require(_amount > 0, Errors.AMOUNT_CANT_BE_ZERO);
         require(
-            msg.sender != address(this),
-            "TokenReputation: Can't deposit to itself with this function"
-        );
-        require(
-            ERC20(msg.sender).transferFrom(msg.sender, address(this), _amount)
+            ITokenReputation(msg.sender).transferFrom(
+                _from,
+                address(this),
+                _amount
+            )
         );
         poolTokensReputation[msg.sender] += _amount;
         return true;
@@ -253,16 +301,19 @@ contract TokenReputation is ERC20, Ownable {
         address _token,
         address _toNewNetwork,
         uint256 _amount
-    ) public onlyFactory returns (uint256 netAmount) {
+    )
+        public
+        onlyFactory
+        onlyAllowed(_toNewNetwork, _token)
+        returns (uint256 netAmount)
+    {
         require(
-            poolTokensReputation[_token] >= _amount,
-            "TokenReputation: Not enough tokens to access this function"
+            _toNewNetwork != address(this),
+            Errors.CALLER_USE_INVALID_ARGUMENT
         );
         require(
-            poolTokensReputation[_toNewNetwork] > 0 ||
-                poolTokensForSponsor[_toNewNetwork][_token] > 0 ||
-                poolTokensForSponsor[address(this)][_toNewNetwork] > 0,
-            "TokenReputation: New network isn't allowed to receive tokens"
+            poolTokensReputation[_token] >= _amount,
+            Errors.INSUFFICIENT_BALANCE
         );
 
         address admin = iFactory.adminOf(_token);
@@ -288,35 +339,54 @@ contract TokenReputation is ERC20, Ownable {
             iToken.transfer(iFactory.adminOf(address(this)), feeAmount);
     }
 
-    //TODO onlyFactory ?
-    // TODO delete ?
-    function allocateToSponsorPool(uint256 _amount, address _token) public {
-        require(
-            poolTokensReputation[_token] >= _amount,
-            "TokenReputation: Not enough tokens to access this function"
-        );
-        // DataTypes.AdminRules memory _rules = iFactory.rulesOf(
-        //     address(this),
-        //     msg.sender
-        // );
-
-        poolTokensForSponsor[msg.sender][_token] += _amount;
-        poolTokensReputation[_token] -= _amount;
+    // TODO géré l'acces au réseau
+    function transferOnPoolReputation(
+        address _toToken,
+        uint256 _amount
+    ) public returns (bool) {
+        ITokenReputation iToken = ITokenReputation(_toToken);
+        require(balanceOf(msg.sender) >= _amount, Errors.INSUFFICIENT_BALANCE);
+        require(!iToken.isBanned(address(this)), Errors.CALLER_IS_BANNED);
+        _approve(msg.sender, _toToken, _amount);
+        iToken.depositReputationFromWallet(msg.sender, _amount);
     }
 
-    function revokeParticipation(
-        uint256 _amount,
-        address _token
-    ) public onlyAdminOf(_token) {
+    function withdrawReputation(uint256 _amount) public {
+        address token = iFactory.tokenOf(msg.sender);
+        require(token != address(0), Errors.CALLER_NOT_OWN_TOKEN);
         require(
-            poolTokensReputation[_token] >= _amount,
-            "Not enough tokens to access this function"
+            poolTokensReputation[token] >= _amount,
+            Errors.INSUFFICIENT_BALANCE
         );
-        DataTypes.AdminRules memory _rules = _findRules(msg.sender);
+        DataTypes.AdminRules memory _rules = iFactory.rulesOf(
+            address(this),
+            token
+        );
         uint256 feeAmount = (_amount * _rules.adminRevokeFeePercentage) / 100;
         uint256 netAmount = _amount - feeAmount;
+        poolTokensReputation[token] -= _amount;
+        if (token != address(this)) {
+            netAmount = _amount;
+            feeAmount = 0;
+        }
+        ITokenReputation iToken = ITokenReputation(token);
+        iToken.transfer(msg.sender, netAmount);
+        if (feeAmount > 0)
+            iToken.transfer(iFactory.adminOf(address(this)), feeAmount);
+    }
+
+    function transferReputationByAdmin(
+        address _token,
+        address _to,
+        uint256 _amount
+    ) public onlyAdminOf(address(this)) {
+        require(
+            poolTokensReputation[_token] >= _amount,
+            Errors.INSUFFICIENT_BALANCE
+        );
         poolTokensReputation[_token] -= _amount;
-        transfer(msg.sender, netAmount);
+        // ? Est ce que je dois permettre un revoke fee to adminOf(_token)
+        ITokenReputation(_token).transfer(_to, _amount);
     }
 
     // Function to set the data URI, which can be used for additional metadata (change as needed)
