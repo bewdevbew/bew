@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 
 import { AppLayout } from "@/sections/layout/AppLayout";
+import { cn } from "@/utils/ui";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={cn(inter.className, "w-screen min-h-screen")}>
         <AppLayout>{children}</AppLayout>
       </body>
     </html>

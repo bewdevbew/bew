@@ -119,7 +119,6 @@ export interface TokenReputationInterface extends Interface {
       | "onboardCustomParticipant"
       | "onboardParticipant"
       | "owner"
-      | "particularRules"
       | "poolTokensForGovernance"
       | "poolTokensForSponsor"
       | "poolTokensReputation"
@@ -231,10 +230,6 @@ export interface TokenReputationInterface extends Interface {
     values: [AddressLike, string, string]
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "particularRules",
-    values: [AddressLike]
-  ): string;
   encodeFunctionData(
     functionFragment: "poolTokensForGovernance",
     values: [AddressLike]
@@ -360,10 +355,6 @@ export interface TokenReputationInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "particularRules",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "poolTokensForGovernance",
     data: BytesLike
@@ -656,36 +647,6 @@ export interface TokenReputation extends BaseContract {
 
   owner: TypedContractMethod<[], [string], "view">;
 
-  particularRules: TypedContractMethod<
-    [arg0: AddressLike],
-    [
-      [
-        boolean,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint
-      ] & {
-        customRules: boolean;
-        initialSupply: bigint;
-        maxSupply: bigint;
-        sponsorTokenRequirement: bigint;
-        adminRetainedTokensPercentage: bigint;
-        networkParticipationPercentage: bigint;
-        networkToChildAllocationPercentage: bigint;
-        adminLegacyFeePercentage: bigint;
-        adminRevokeFeePercentage: bigint;
-        governancePercentageToTokensPercentage: bigint;
-      }
-    ],
-    "view"
-  >;
-
   poolTokensForGovernance: TypedContractMethod<
     [arg0: AddressLike],
     [bigint],
@@ -892,37 +853,6 @@ export interface TokenReputation extends BaseContract {
   getFunction(
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "particularRules"
-  ): TypedContractMethod<
-    [arg0: AddressLike],
-    [
-      [
-        boolean,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint
-      ] & {
-        customRules: boolean;
-        initialSupply: bigint;
-        maxSupply: bigint;
-        sponsorTokenRequirement: bigint;
-        adminRetainedTokensPercentage: bigint;
-        networkParticipationPercentage: bigint;
-        networkToChildAllocationPercentage: bigint;
-        adminLegacyFeePercentage: bigint;
-        adminRevokeFeePercentage: bigint;
-        governancePercentageToTokensPercentage: bigint;
-      }
-    ],
-    "view"
-  >;
   getFunction(
     nameOrSignature: "poolTokensForGovernance"
   ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
