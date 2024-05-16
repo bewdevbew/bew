@@ -10,13 +10,7 @@ import { Mockup } from "@/sections/ui/Mockup";
 import { Radar } from "@/sections/ui/Radar";
 import { SectionHighlight } from "@/sections/ui/SectionHiglight";
 import { HomeCardIntegration } from "@/sections/views/Home/HomeCardIntegration";
-import {
-  motion,
-  useMotionTemplate,
-  useMotionValue,
-  useScroll,
-  useTransform,
-} from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Lock, Mail, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { useRef } from "react";
@@ -59,8 +53,8 @@ export default function Home() {
         <div className="flex flex-col gap-5 ">
           <CardHoverable
             className="w-full items-start bg-gradient-to-tr from-primary  to-info text-primary-foreground"
-            title="Dew Protocole"
-            description="Freelance will never be the same again. Where trust meets innovation"
+            title="ZeroDay Protocol"
+            description="Internet will never be the same again. Where trust meets innovation"
             images={[{ img: "/logo.webp" }]}
           ></CardHoverable>
           <div className="flex   gap-10">
@@ -113,7 +107,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <div className="flex flex-col w-full items-center">
+      <div className="flex flex-col w-[80vw] xs:w-[90vw] items-center mx-auto">
         <SectionHighlight
           btn={{
             children: "Mint handle",

@@ -25,7 +25,7 @@ export const SectionHighlight = ({
 
   const [btnIsHover, setBtnIsHover] = useState(false);
   return (
-    <div className="flex flex-col w-[60vw]">
+    <div className="flex flex-col w-full">
       <div ref={ref} className="flex items-center gap-10 ">
         <div className="flex flex-col h-[50vh] gap-4 items-center">
           <motion.div
