@@ -1,174 +1,215 @@
-import { DewButton, DewModuleCore } from "@/types/dew/module";
+import { DewModuleCore } from "@/types/dew/module";
 import { DewUICore } from "@/types/dew/ui";
 
-// Fonction utilitaire pour vérifier si un objet a une propriété "value"
-function hasValueProperty(obj: any): obj is { value: any } {
-  return obj && typeof obj === "object" && "value" in obj;
-}
+const __debug: Record<string, number> = {};
 
-// Utility type to extract the value type based on the module's type property
-type ModuleValue<T> = T extends { value: infer U } ? U : never;
-
-// Définir le type pour le module avec le type
-type ModuleWithType = {
-  type: keyof DewModuleCore | keyof DewUICore | keyof DewButton | string;
-  [key: string]:
-    | DewModuleCore
-    | DewButton
-    | DewUICore
-    | string
-    | ModuleWithType;
-};
-
-// Utiliser ce type pour obtenir la valeur d'un module
-export function getModuleValue<T extends ModuleWithType>(
-  module: T
-): ModuleValue<T[T["type"]]> {
-  const moduleType = module.type;
-  const moduleData = module[moduleType];
-
-  if (moduleData && hasValueProperty(moduleData)) {
-    return moduleData.value as ModuleValue<T[T["type"]]>;
-  }
-
-  throw new Error(`Module value not found for type "${moduleType}"`);
-}
-
-// Interface ModuleScope
-interface ModuleScope {
-  module: ModuleWithType["type"][];
-  object: ModuleWithType["type"][];
-  boolean: ModuleWithType["type"][];
-  function: ModuleWithType["type"][];
-  array: ModuleWithType["type"][];
-  undefined: ModuleWithType["type"][];
-  text: ModuleWithType["type"][];
-}
+export type ModuleWithType<T extends keyof DewModuleCore> = {
+  type: T;
+} & DewModuleCore[T]["default"];
 
 // Type pour les descripteurs de propriété
-type PropertyDescriptors<T> = {
-  [K in keyof T]: {
-    value?: T[K];
-    writable?: boolean;
-    enumerable?: boolean;
-    configurable?: boolean;
-    get?: () => T[K];
-    set?: (value: T[K]) => void;
-  };
-};
+interface PropertyDescriptors<T> extends PropertyDescriptorMap, ThisType<T> {}
+
 // Classe Module
-export class Module<T extends ModuleWithType> {
-  _type: string;
-  _scope: ModuleScope;
-  private module: T;
-  private data: any;
 
-  constructor(data: T) {
-    this.module = data;
-    this.data = getModuleValue(data);
-
-    this._type = this.module.type;
-    this._scope = this.initializeScope();
-    this.populateScope(this.data);
-
-    if (
-      typeof this.data === "object" &&
-      this.data !== null &&
-      !Array.isArray(this.data)
-    ) {
-      this.data = Object.keys(this.data).reduce((acc: any, key) => {
-        if (this.data[key] !== undefined) {
-          if (
-            this.determineType({
-              type: this.getPrimitiveType(this.data[key]),
-              value: this.data[key],
-            }) === "module"
-          ) {
-            acc[key] = new Module(this.data[key] as T); // cast à T pour respecter le type générique
-          } else {
-            acc[key] = this.data[key];
-          }
-        }
-        return acc;
-      }, {});
-    }
-
-    const descriptors: PropertyDescriptors<any> = Object.keys(this.data).reduce(
-      (acc, key) => {
-        acc[key as keyof any] = {
-          get: () =>
-            (this.data[key] as any).type
-              ? getModuleValue(this.data[key] as any)
-              : this.data[key],
-          set: (value: any) => {
-            this.data[key] = value;
-          },
-          enumerable: true,
-          configurable: true,
-        };
-        return acc;
-      },
-      {} as PropertyDescriptors<any>
-    );
-
-    Object.defineProperties(this, descriptors);
-    Object.assign(this, this.data);
+const allowance = "undefined";
+const target = 0;
+const _for = undefined;
+const _log = ({
+  d,
+  s,
+  i = 0,
+  t = target,
+  f = _for,
+  a = allowance,
+}: {
+  f?: string;
+  d: any;
+  s: string;
+  i?: number;
+  t?: number;
+  a?: "more" | "less" | "equal" | "undefined";
+}) => {
+  // récupérer le dernier mot de la string
+  let string: string = s.split(" ") as any;
+  string = string[string.length - 1];
+  if (__debug[string] === undefined) {
+    __debug[string] = 0;
   }
 
-  private determineType(data: ModuleWithType): string {
-    return data[data.type] ? "module" : this.getPrimitiveType(data.value);
+  if (!!f && f != string) {
+    return;
+  } else if (
+    { less: i <= t, more: i >= t, equal: i == t, undefined: true }[a] ||
+    (f == string &&
+      { less: i <= t, more: i >= t, equal: i == t, undefined: true }[a])
+  ) {
+    __debug[string] += 1;
+    console.log({
+      string: s,
+      data: d,
+      index: i,
+      target: t,
+      __debug,
+      test: string,
+    });
   }
+};
 
-  private getPrimitiveType(value: any): string {
-    if (Array.isArray(value)) return "array";
-    if (value === null || value === undefined) return "undefined";
-    return typeof value;
-  }
-
-  private initializeScope(): ModuleScope {
-    return {
-      module: [],
-      object: [],
-      boolean: [],
-      function: [],
-      array: [],
-      undefined: [],
-      text: [],
-    };
-  }
-
-  private populateScope(data: any): void {
-    if (Array.isArray(data)) {
-      for (const item of data) {
-        const itemType = this.determineType({
-          type: this.getPrimitiveType(item),
-          value: item,
-        });
-        this._scope[itemType].push(item.toString());
-      }
-    } else if (typeof data === "object" && data !== null) {
-      for (const key in data) {
-        if (data.hasOwnProperty(key)) {
-          const itemType = this.determineType({
-            type: this.getPrimitiveType(data[key]),
-            value: data[key],
-          });
-          this._scope[itemType].push(key);
-        }
-      }
-    } else {
-      const itemType = this.getPrimitiveType(data);
-      this._scope[itemType].push(data.toString());
-    }
-  }
-
-  getValue<K extends keyof T>(key: K): T[K] {
-    const moduleData = this.data[key];
-
-    if (moduleData) {
-      return moduleData as T[K];
-    }
-
-    throw new Error(`Module value not found for key "${key}"`);
-  }
+interface ModuleObject {
+  get: <K extends keyof this>(key: K) => this[K];
+  getValue: <K extends keyof this>(key: K) => this[K];
+  set: <K extends keyof this>(key: K, value: this[K]) => void;
 }
+// Interface ModuleScope
+interface ModuleScope {
+  module: (keyof DewModuleCore)[];
+  object: (keyof DewModuleCore)[];
+  boolean: (keyof DewModuleCore)[];
+  function: (keyof DewModuleCore)[];
+  array: (keyof DewModuleCore)[];
+  undefined: (keyof DewModuleCore)[];
+  text: (keyof DewModuleCore)[];
+}
+
+// export class BaseModule<T extends keyof DewModuleCore> {
+//   _type = 0;
+//   constructor(data: ModuleWithType<T>) {}
+// }
+
+// export class BaseModule<T extends keyof DewModuleCore> {
+//   // _type: string;
+//   // _scope: ModuleScope;
+//   // private module: any;
+//   // private data: any;
+
+//   constructor(data: ModuleWithType<T>) {
+//     _log({
+//       d: data,
+//       s: `Pour commencer ${data?.type}`,
+//       i: 0,
+//     });
+
+//     try {
+//       // this.module = data;
+//       // Utiliser des assertions de type pour informer TypeScript du type attendu
+//       // this.data = ((data as any)[data.type] ||
+//       //   (data as any).value ||
+//       //   data) as DewModuleCore[T]["default"];
+//       // this._type = data.type;
+//       // const recast = () =>
+//       //   ({
+//       //     className: () => {
+//       //       this.data = typeof this.data === "string" ? this.data : "";
+//       //     },
+//       //     size: () => this.data as number,
+//       //     variants: () => this.data as string,
+//       //     modules: () => this.data as string,
+//       //     ui: () => this.data as string,
+//       //     style: () => this.data as string,
+//       //     ux: () => this.data as string,
+//       //     api: () => this.data as string,
+//       //     button: () => this.data as string,
+//       //   }[data.type as keyof DewModuleCore]);
+//       // this._scope = this.initializeScope(this.data);
+//       // recast();
+//       // _log({
+//       //   d: this.data,
+//       //   s: `Après scope ${data?.type}`,
+//       //   i: 1,
+//       // });
+//       // _log({
+//       //   d: this.data,
+//       //   s: `Après reorganisation ${data?.type}`,
+//       //   i: 2,
+//       // });
+//       // _log({
+//       //   d: this.data,
+//       //   s: `Après value check ${data?.type}`,
+//       //   i: 3,
+//       // });
+//       // _log({
+//       //   d: this.data,
+//       //   s: `Pour finir ${data?.type}`,
+//       //   i: 4,
+//       // });
+//       // this.data = {};
+//     } catch (error) {
+//       throw new Error(`Error on ${"className"}`);
+//     }
+//   }
+
+//   protected initializeScope(data: any): ModuleScope {
+//     const scope: ModuleScope = {
+//       module: [],
+//       object: [],
+//       boolean: [],
+//       function: [],
+//       array: [],
+//       undefined: [],
+//       text: [],
+//     };
+//     // try {
+//     //   const _data = data?.value || data;
+//     //   if (
+//     //     typeof _data === "object" &&
+//     //     _data !== null &&
+//     //     !Array.isArray(_data)
+//     //   ) {
+//     //     for (const key in _data) {
+//     //       if (
+//     //         typeof _data[key] === "object" &&
+//     //         _data[key] !== null &&
+//     //         !Array.isArray(_data[key])
+//     //       ) {
+//     //         if (_data[key]?.type) {
+//     //           scope.module.push(key as keyof DewModuleCore);
+//     //         } else {
+//     //           scope.object.push(key as keyof DewModuleCore);
+//     //         }
+//     //       } else if (typeof _data[key] === "undefined") {
+//     //         scope.undefined.push(key as keyof DewModuleCore);
+//     //       } else if (
+//     //         typeof _data[key] === "number" ||
+//     //         typeof _data[key] === "string" ||
+//     //         typeof _data[key] === "symbol"
+//     //       ) {
+//     //         scope.text.push(key as keyof DewModuleCore);
+//     //       } else {
+//     //         scope[typeof _data[key] as keyof ModuleScope].push(
+//     //           key as keyof DewModuleCore
+//     //         );
+//     //       }
+//     //     }
+//     //   }
+//     // } catch (error) {
+//     //   console.error("Error initialize scope :", error);
+//     //   throw new Error(`Error on ${this.module.type}`);
+//     // }
+//     return scope;
+//   }
+
+//   // get<K extends keyof this>(key: K): this[K] {
+//   //   return this.data[key] as this[K];
+//   // }
+
+//   // getValue<K extends keyof this>(key: K): this[K] {
+//   //   return this.data[key] as this[K];
+//   // }
+
+//   // set<K extends keyof this>(key: K, value: this[K]): void {
+//   //   this.data[key] = value as any;
+//   // }
+// }
+
+// export class BaseModule {
+//   type: string;
+//   [key: string]: any;
+
+//   constructor(type: string, data: any) {
+//     this.type = type;
+//     Object.assign(this, data);
+//   }
+// }
+
+// Exemple de test type

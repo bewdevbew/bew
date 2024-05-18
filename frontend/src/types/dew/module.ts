@@ -1,5 +1,7 @@
-import { ReactNode } from "react";
+import { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import { DewUICore } from "./ui";
+// import { DewModuleBtn } from "./module_btn";
+import { ModuleWithType } from "@/utils";
 
 /**
  * API DeW Module
@@ -106,13 +108,13 @@ type TComponent = {
 };
 
 type DewModuleUI = {
-  type: "ui";
-  ui: {
+  type: "modules";
+  modules: {
     value: {
-      dew_className?: DewUICore["CLASSNAME"];
-      dew_style?: TSyleSheet;
-      dew_variants?: DewUICore["VARIANTS"];
-      dew_size?: DewUICore["SIZE"];
+      className: DewUICore["CLASSNAME"];
+      style: TSyleSheet;
+      variants: DewUICore["VARIANTS"];
+      size: DewUICore["SIZE"];
     };
   };
 };
@@ -147,16 +149,129 @@ export interface DewModuleSystem {
   ui_system: DewModuleUI;
   ux_system: DewModuleUX;
 }
-export interface DewButton {
-  type: "button";
-  button: {
+// export interface DewButton {
+//   type: "button";
+//   button: {
+//     value: DewModuleCore["modules"];
+//   };
+// }
+
+export interface DewModules {
+  type: "modules";
+  modules: {
     value: {
-      module_ui?: DewModuleSystem["ui_system"];
-      module_ux?: DewModuleSystem["ux_system"];
-      module_api?: DewModuleSystem["api_system"];
+      ui: DewModuleSystem["ui_system"] | undefined;
+      ux: DewModuleSystem["ux_system"] | undefined;
+      api: DewModuleSystem["api_system"] | undefined;
     };
   };
 }
+
+export type ModuleTyped<T extends keyof DewModuleCore> = {
+  type: T;
+} & DewModuleCore[T]["default"];
+
+export type ModuleValue<T extends keyof DewModuleCore> =
+  DewModuleCore[T]["default"][keyof DewModuleCore[T]["default"]] extends {
+    value: infer V;
+  }
+    ? V
+    : never;
+
 export interface DewModuleCore {
-  BUTTON: DewButton;
+  className: {
+    type: "default";
+    default: {
+      type: "className";
+      className: { value: string };
+    };
+  };
+  size: {
+    type: "default";
+    default: DewModuleSystem["ui_system"]["modules"]["value"]["size"];
+  };
+  variants: {
+    type: "default";
+    default: DewModuleUI["modules"]["value"]["variants"];
+  };
+  style: {
+    type: "default";
+    default: {
+      type: "style";
+      style: { value: React.CSSProperties };
+    };
+  };
+  ui: {
+    type: "default";
+    default: {
+      type: "ui";
+      ui: {
+        value: {
+          type: "modules";
+          modules: {
+            value: {
+              className: DewModuleCore["className"]["default"];
+              style: DewModuleCore["style"]["default"];
+              variants: DewModuleCore["variants"]["default"];
+              size: DewModuleCore["size"]["default"];
+            };
+          };
+        };
+      };
+    };
+  };
+  button: {
+    type: "default";
+    default: {
+      type: "button";
+      button: {
+        value: {
+          type: "modules";
+          modules: {
+            value: {
+              ui: DewModuleSystem["ui_system"]["modules"]["value"];
+              // ux: DewModuleSystem["ux_system"]["modules"]["value"];
+              // api: DewModuleSystem["api_system"]["modules"]["value"];
+            };
+          };
+        };
+      };
+    };
+    // admin: DewModuleBtn["default"];
+    // dev: DewModuleBtn["custom"];
+    // custom: DewModuleBtn["custom"];
+  };
+
+  // modules: {
+  //   type: "default";
+  //   default: DewModules;
+  // };
+
+  // className1: {
+  //   type: "default";
+  //   default: {
+  //     type: "className1";
+  //     className: { value: string };
+  //   };
+  // };
+
+  // style: {
+  //   type: "default";
+  //   default: DewModuleUI["modules"]["value"]["style"];
+  // };
+  // ux: {
+  //   type: "default";
+  //   default: DewModuleSystem["ux_system"]["ux"];
+  // };
+
+  // api: {
+  //   type: "default";
+  //   default: DewModuleSystem["api_system"]["api"];
+  // };
 }
+
+// export type ModuleTyped<T extends keyof DewModuleCore> = {
+//   type: T;
+// } & {
+//   [K in T]: DewModuleCore[K]["default"][]['value'];
+// };
