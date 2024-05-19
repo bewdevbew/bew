@@ -5,7 +5,7 @@ import React from "react";
 
 import { APP } from "@/constants/app";
 import { cn } from "@/utils/ui";
-import { TextWriterEffectSmooth } from "@/components/text/TextWritterEffectSmooth";
+import { TextWriterEffectSmooth } from "@/components/common/text/TextWritterEffectSmooth";
 
 const transition = {
   duration: 0,

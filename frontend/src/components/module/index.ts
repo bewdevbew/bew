@@ -1,5 +1,4 @@
 import { DewModuleCore, ModuleTyped, ModuleValue } from "@/types/dew/module";
-import { createModuleType } from "./ui";
 
 interface ModuleScope {
   module: (keyof DewModuleCore)[];
@@ -94,45 +93,6 @@ export class BaseModule<T extends keyof DewModuleCore> {
 
     cast();
 
-    return scope;
-
-    // try {
-    //   const _data = data?.value || data;
-    //   if (
-    //     typeof _data === "object" &&
-    //     _data !== null &&
-    //     !Array.isArray(_data)
-    //   ) {
-    //     for (const key in _data) {
-    //       if (
-    //         typeof _data[key] === "object" &&
-    //         _data[key] !== null &&
-    //         !Array.isArray(_data[key])
-    //       ) {
-    //         if (_data[key]?.type) {
-    //           scope.module.push(key as keyof DewModuleCore);
-    //         } else {
-    //           scope.object.push(key as keyof DewModuleCore);
-    //         }
-    //       } else if (typeof _data[key] === "undefined") {
-    //         scope.undefined.push(key as keyof DewModuleCore);
-    //       } else if (
-    //         typeof _data[key] === "number" ||
-    //         typeof _data[key] === "string" ||
-    //         typeof _data[key] === "symbol"
-    //       ) {
-    //         scope.text.push(key as keyof DewModuleCore);
-    //       } else {
-    //         scope[typeof _data[key] as keyof ModuleScope].push(
-    //           key as keyof DewModuleCore
-    //         );
-    //       }
-    //     }
-    //   }
-    // } catch (error) {
-    //   console.error("Error initialize scope :", error);
-    //   throw new Error(`Error on ${this.module.type}`);
-    // }
     return scope;
   }
 

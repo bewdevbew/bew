@@ -20,5 +20,5 @@ npx hardhat test
 
 ```bash
 npx hardhat node # Lancer un noeud local
-npx hardhat run scripts/deploy.js --network localhost # Ouvrir un autre terminal
+npm run deploy # Ouvrir un autre terminal
 ```

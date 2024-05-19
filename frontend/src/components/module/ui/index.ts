@@ -1,53 +1,48 @@
-import { DewModuleCore } from "@/types/dew/module";
+import { DewModuleCore, ModuleTyped } from "@/types/dew/module";
 import { BaseModule } from "..";
-// import { BaseModule, ModuleWithType } from "@/utils";
-// import { VariantsModule } from "./variants";
-// import { SizeModule } from "./size";
-// import { ClassNameModule } from "./className";
 
-type UIModuleValues =
-  DewModuleCore["ui"]["default"]["ui"]["value"]["modules"]["value"];
+type UIModuleKeys =
+  keyof DewModuleCore["ui"]["default"]["ui"]["value"]["modules"]["value"];
 
-type ModuleValue<T extends keyof DewModuleCore["ui"]> =
-  DewModuleCore["ui"]["default"]["ui"]["value"][T][keyof DewModuleCore["ui"][T]["default"]] extends {
-    value: infer V;
-  }
-    ? V
-    : never;
+type UIModuleValues = {
+  [K in UIModuleKeys]: DewModuleCore["ui"]["default"]["ui"]["value"]["modules"]["value"][K];
+};
 
-class UIModule<K extends keyof UIModuleValues> extends BaseModule<"ui"> {
-  constructor(key: K, value: UIModuleValues[K]) {
-    const uiModule: ModuleTyped<"ui"> = {
-      type: "ui",
-      ui: {
-        modules: {
-          value: {
-            [key]: { value },
-          } as any, // Type assertion pour contourner le typage strict
-        },
-      },
-    };
-    super(uiModule);
+type UIAccepted = "string" | "object" | "undefined";
+
+export class BaseUIModule<
+  K extends keyof UIModuleValues
+> extends BaseModule<K> {
+  __type: UIAccepted;
+  private value: any;
+  constructor(key: K, value: any) {
+    const moduleData = {
+      type: key,
+      [key]: { value } as any,
+    } as ModuleTyped<K>;
+    super(moduleData);
+    this.value = value;
+
+    this.__type = typeof value as UIAccepted;
   }
 
-  getValue<K extends keyof UIModuleValues>(key: K): UIModuleValues[K]["value"] {
-    return (this.module.ui.modules.value as any)[key].value;
+  toString(): string {
+    if (
+      typeof this.value != "string" &&
+      typeof this.value != "symbol" &&
+      typeof this.value != "number" &&
+      typeof this.value != "bigint"
+    ) {
+      throw new Error(
+        `Error DEW_MODULE: type is not supported  {
+            type : ${typeof this.value}
+        }`
+      );
+    }
+    return String(this.value);
   }
 }
 
-// export const uiButtonModule = new UIModule({
-//   type: "ui",
-//   ui: {
-//     value: {
-//       type: "modules",
-//       modules: {
-//         value: {
-//           variants: DEW_MODULE_UI_DEFAULT.button.variants,
-//           className: DEW_MODULE_UI_DEFAULT.button.className,
-//           style: DEW_MODULE_UI_DEFAULT.button.style, // dew_api: undefined,
-//           size: DEW_MODULE_UI_DEFAULT.button.size,
-//         },
-//       },
-//     },
-//   },
-// });
+export const MODULE_UI_DEFAULT = {
+  className: (s: string) => new BaseUIModule("className", s),
+};

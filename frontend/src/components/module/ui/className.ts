@@ -1,5 +1,6 @@
 import { DewModuleCore, ModuleTyped } from "@/types/dew/module";
 import { BaseModule } from "..";
+import { BaseUIModule } from ".";
 
 /**
  * @example
@@ -11,12 +12,8 @@ import { BaseModule } from "..";
  * *
  * * const exempleClassNameModule = new ClassNameModule("text-xs"); // return text-xs
  */
-export class ClassNameModule extends BaseModule<"className"> {
-  constructor(classNameValue: string) {
-    const classNameType: ModuleTyped<"className"> = {
-      type: "className",
-      className: { value: classNameValue },
-    };
-    super(classNameType);
+export class ClassNameModule extends BaseUIModule<"className"> {
+  constructor(value: string) {
+    super("className", value);
   }
 }

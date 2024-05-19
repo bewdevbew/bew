@@ -9,7 +9,6 @@ import { APP } from "@/constants/app";
 export function Header() {
   const pathname = usePathname();
 
-  console.log({ pathname });
   return (
     <header
       style={{ zIndex: 100 }}
@@ -31,6 +30,7 @@ export function Header() {
           {[
             { href: "/", label: "Home" },
             { href: "/protocol-test", label: "Protocol" },
+            { href: "/create/token", label: "Create" },
           ].map(({ href, label }, i) => (
             <Link
               href={href}

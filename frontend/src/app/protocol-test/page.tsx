@@ -1,5 +1,5 @@
 "use client";
-import { TextAddressEvm } from "@/components/text/TextAddressEvm";
+import { TextAddressEvm } from "@/components/common/text/TextAddressEvm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table } from "@/components/ui/table";

@@ -1,6 +1,6 @@
 "use client";
 
-import { TextWriterEffectSmooth } from "@/components/text/TextWritterEffectSmooth";
+import { TextWriterEffectSmooth } from "@/components/common/text/TextWritterEffectSmooth";
 
 import { Card } from "@/components/ui/card";
 import { CardHoverable } from "@/components/ui/card-hoverable";

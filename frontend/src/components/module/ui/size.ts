@@ -1,5 +1,6 @@
 import { DewModuleCore, ModuleTyped } from "@/types/dew/module";
 import { BaseModule } from "..";
+import { BaseUIModule } from ".";
 
 /**
  * @example
@@ -17,3 +18,38 @@ import { BaseModule } from "..";
  * *
  * * const exempleSizeModule = new BaseModule(sizeType);
  */
+
+type SizeValue = DewModuleCore["size"]["default"]["size"]["value"];
+
+export class SizeModule extends BaseUIModule<"size"> {
+  default: SizeValue["default"];
+  state: SizeValue["state"];
+  lg: SizeValue["lg"];
+  sm: SizeValue["sm"];
+  constructor(value: SizeValue | string) {
+    if (typeof value === "string") {
+      value = {
+        default: value,
+        state: "default",
+        lg: value,
+        sm: value,
+      };
+    }
+    super("size", value);
+
+    this.default = value.default;
+    this.state = value.state;
+    this.lg = value.lg;
+    this.sm = value.sm;
+
+    if (typeof this[this.state] !== "string") {
+      throw new Error(`Error DEW_MODULE: type is not supported  {
+            type : ${typeof this[this.state]},
+            module:'size',
+        }`);
+    }
+  }
+  toString(): string {
+    return this[this.state];
+  }
+}

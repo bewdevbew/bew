@@ -12,10 +12,14 @@
     "coverage": "jest --coverage --passWithNoTests"
   },
   "dependencies": {
+    "@dicebear/collection": "^8.0.1",
+    "@dicebear/core": "^8.0.1",
+    "@radix-ui/react-hover-card": "^1.0.7",
     "@radix-ui/react-slot": "^1.0.2",
     "@tanstack/react-query": "^5.36.0",
     "class-variance-authority": "^0.7.0",
     "connectkit": "^1.7.3",
+    "crypto-js": "^4.2.0",
     "ethers": "^6.12.1",
     "lucide-react": "^0.378.0",
     "mini-svg-data-uri": "^1.4.4",
@@ -33,6 +37,7 @@
     "@tanstack/eslint-plugin-query": "^5.35.6",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^15.0.5",
+    "@types/crypto-js": "^4.2.2",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
