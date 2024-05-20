@@ -5,6 +5,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectKitProvider, getDefaultConfig } from "connectkit";
 import { APP } from "@/constants/app";
 import { ReactNode } from "react";
+import {
+  LensConfig,
+  LensProvider,
+  development,
+  production,
+} from "@lens-protocol/react-web";
+import { bindings } from "@lens-protocol/wagmi";
 
 // connect kit doesn't export the config type, so we create it here
 type ConnectKitConfig = Parameters<typeof getDefaultConfig>[0];
@@ -18,10 +25,10 @@ const appConfigs = {
         [hardhat.id]: http(),
       },
     } as Partial<ConnectKitConfig>,
-    // lens: {
-    //   environment: development,
-    //   debug: true,
-    // } as Partial<LensConfig>,
+    lens: {
+      environment: development,
+      debug: true,
+    } as Partial<LensConfig>,
   },
 
   test: {
@@ -31,9 +38,9 @@ const appConfigs = {
         [polygonMumbai.id]: http(),
       },
     } as Partial<ConnectKitConfig>,
-    // lens: {
-    //   environment: production,
-    // } as Partial<LensConfig>,
+    lens: {
+      environment: production,
+    } as Partial<LensConfig>,
   },
   production: {
     connectkit: {
@@ -42,15 +49,15 @@ const appConfigs = {
         [polygon.id]: http(),
       },
     } as Partial<ConnectKitConfig>,
-    // lens: {
-    //   environment: production,
-    // } as Partial<LensConfig>,
+    lens: {
+      environment: production,
+    } as Partial<LensConfig>,
   },
 };
 
 const appConfig = appConfigs[process.env.NODE_ENV || "development"];
 
-const wagmiConfig = createConfig(
+export const wagmiConfig = createConfig(
   getDefaultConfig({
     appName: APP.name,
     ...appConfig.connectkit,
@@ -65,11 +72,18 @@ const wagmiConfig = createConfig(
 
 const queryClient = new QueryClient();
 
+const lensConfig: LensConfig = {
+  environment: appConfig.lens.environment as any,
+  bindings: bindings(wagmiConfig),
+  ...appConfig.lens,
+};
 export const Web3Provider = ({ children }: { children: ReactNode }) => {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ConnectKitProvider>{children}</ConnectKitProvider>
+        <ConnectKitProvider>
+          <LensProvider config={lensConfig}>{children}</LensProvider>
+        </ConnectKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

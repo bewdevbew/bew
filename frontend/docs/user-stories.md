@@ -92,14 +92,16 @@
 
 - `USER`
 
-  - Description: Choisir différentes formules de lancement tokens entre `CENTRALISER | DECENTRALISER | CUSTOM`
+  [x] Description: Choisir différentes formules de lancement tokens entre `CENTRALISER | WARD | DICTATOR | EXPLORER`
+
   - Estimate: 2
   - Priority: 1
   - Status: 0
 
 - `USER`
 
-  - Description: Configurer le nom et le symbole du token
+  [x] Description: Configurer le nom et le symbole du token
+
   - Estimate: 0
   - Priority: 1
   - Status: 0
@@ -140,7 +142,7 @@
   - Status: 0
 
 - `SYSTEM`
-  - Description: Transférer la part d'admin dans le wallet de `ADMIN` au moment du déploiement
+  - Description: Voir le score du token pour la `DECENTRALISATION | RISK NETWORK | RISK TOKEN`
   - Estimate: 0
   - Priority: 1
   - Status: 0

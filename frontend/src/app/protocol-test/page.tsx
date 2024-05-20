@@ -3,7 +3,8 @@ import { TextAddressEvm } from "@/components/common/text/TextAddressEvm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table } from "@/components/ui/table";
-import { useProtocol } from "@/hooks/useProtocol";
+import { useProtocol } from "@/hooks/useContract";
+
 import { ethers } from "ethers";
 import { useAccount } from "wagmi";
 

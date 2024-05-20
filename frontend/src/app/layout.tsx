@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
-import { AppProvider } from "@/sections/provider/AppProvider";
 import { cn } from "@/utils/ui";
 import { Web3Provider } from "@/sections/provider/Web3Provider";
+import { AppProvider } from "@/context/app";
+import { Toaster } from "@/components/ui/toaster";
+import { Header } from "@/sections/layout/Header";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,7 +29,12 @@ export default function RootLayout({
         )}
       >
         <Web3Provider>
-          <AppProvider>{children}</AppProvider>
+          <AppProvider>
+            {/* <Header /> */}
+
+            {children}
+            <Toaster />
+          </AppProvider>
         </Web3Provider>
       </body>
     </html>

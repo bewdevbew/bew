@@ -5,10 +5,11 @@ import Link from "next/link";
 
 import { ConnectKitButton } from "connectkit";
 import { APP } from "@/constants/app";
+import { useAccount } from "wagmi";
 
 export function Header() {
   const pathname = usePathname();
-
+  const { address } = useAccount();
   return (
     <header
       style={{ zIndex: 100 }}
@@ -31,6 +32,7 @@ export function Header() {
             { href: "/", label: "Home" },
             { href: "/protocol-test", label: "Protocol" },
             { href: "/create/token", label: "Create" },
+            { href: `/profile/${address}`, label: "Profile" },
           ].map(({ href, label }, i) => (
             <Link
               href={href}

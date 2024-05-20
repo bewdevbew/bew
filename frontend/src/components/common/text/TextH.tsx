@@ -11,5 +11,9 @@ export const TextH = ({
   className?: string;
 }) => {
   const _className = new ClassNameModule(className);
-  return <h6 className={cn("font-bold text-xl", _className)}>{children}</h6>;
+  return (
+    <h6 className={cn("font-bold text-xl", _className.getValue())}>
+      {children}
+    </h6>
+  );
 };
