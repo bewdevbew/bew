@@ -10,6 +10,7 @@ type TFooter = {
 };
 
 import { cva, type VariantProps } from "class-variance-authority";
+import { HeaderCard } from "./header-card";
 
 const cardVariants = cva("bg-background", {
   variants: {
@@ -42,7 +43,8 @@ export const Card = ({
   children: ReactNode;
   header?: {
     icon?: any;
-    title: string;
+    button?: ReactNode;
+    title: ReactNode;
   };
   onClick?: any;
   height?: string;
@@ -52,9 +54,9 @@ export const Card = ({
   className?: string;
   footer?: TFooter | true;
 }) => {
-  if (footer !== undefined && footer === true) {
+  if (footer !== undefined && footer === true && header?.title) {
     footer = {
-      title: `See more ${header?.title.toLowerCase()}`,
+      title: `See more ${header?.title}`,
     };
   }
   return (
@@ -62,7 +64,7 @@ export const Card = ({
       onClick={onClick}
       style={style}
       className={cn(
-        !header && padding,
+        padding,
         `${width} ${height}  shadow  flex border overflow-hidden rounded-lg flex-col`,
         cardVariants({ variant }),
 
@@ -70,21 +72,14 @@ export const Card = ({
       )}
     >
       {header ? (
-        <div className="w-full px-4 py-2  bg-secondary flex items-center gap-4 border-b text-left">
-          {header?.icon && (
-            <span className="opacity-80 text-[44px] bg-background/50 p-2 rounded shadow">
-              {header.icon}
-            </span>
-          )}
-          <div className="font-semibold w-full whitespace-nowrap">
-            {header.title}
-          </div>
-        </div>
+        <HeaderCard button={header.button} icon={header.icon} className="mb-3">
+          {header.title}
+        </HeaderCard>
       ) : (
         <></>
       )}
       {children}
-      {footer !== undefined ? (
+      {footer !== true && footer !== undefined ? (
         <div
           onClick={typeof footer === "object" && footer?.onClick}
           className={cn(

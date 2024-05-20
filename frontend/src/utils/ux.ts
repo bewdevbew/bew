@@ -18,3 +18,9 @@ export const getRandomPseudo = (address: `0x${string}`) => {
 
   return `${adjectives[adjIndex]}-${nouns[nounIndex]}${number}`;
 };
+
+export const truncateAddress = (address: string) => {
+  return `${address.substring(0, 4)}...${address.substring(
+    address.length - 4
+  )}`;
+};

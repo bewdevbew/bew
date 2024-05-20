@@ -9,7 +9,8 @@ import { wagmiConfig } from "@/sections/provider/Web3Provider";
 import { Contract, ethers } from "ethers";
 import { DataTypes } from "../../contract/typechain/contracts/TokenReputation";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ReceiptIndianRupee } from "lucide-react";
 export type ContractType = {
   token: TokenReputation;
   factory: TokenReputationFactory;
@@ -49,16 +50,9 @@ export const useContract = <C extends keyof ContractType>(contract: C) => {
     return result;
   };
 
-  const [isContract, setIsContract] = useState<ContractType[C]>(
-    getContract(contract, address)
-  );
   return {
     post,
-    contract: {
-      ...isContract,
-      attach: (address: `0x${string}`) =>
-        setIsContract(getContract(contract, address)),
-    },
+    contract: getContract(contract) as ContractType[C],
   };
 };
 
@@ -91,4 +85,39 @@ export const useProtocol = ({ maxLength = 10 }: { maxLength?: number }) => {
     queryKey: ["info-protocol"],
     queryFn: () => getInfoProtocol(maxLength).then((el) => el),
   });
+};
+
+export const useToken = ({
+  address,
+  auto = false,
+}: {
+  auto: boolean;
+  address: `0x${string}`;
+}) => {
+  const { data, error, isError, isPending, ...rest } = useQuery({
+    enabled: auto,
+    queryKey: ["token", address],
+    queryFn: async () => {
+      try {
+        const contract = getContract("token", address);
+        const data = await contract.getInfo();
+        return data;
+      } catch (error) {
+        console.log("Error use token", { error });
+        throw new Error(`Error on use token ${address}`);
+      }
+    },
+  });
+
+  return {
+    data,
+    error,
+    isError,
+    isPending,
+    ...rest,
+    execute: async () => {
+      auto = true;
+      return data;
+    },
+  };
 };

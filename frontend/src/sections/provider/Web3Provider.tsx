@@ -26,7 +26,7 @@ const appConfigs = {
       },
     } as Partial<ConnectKitConfig>,
     lens: {
-      environment: development,
+      environment: production,
       debug: true,
     } as Partial<LensConfig>,
   },
