@@ -121,3 +121,24 @@
 .on-hover-parent:hover > .on-hover-child {
   opacity: 0.8;
 }
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #00000000;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+
+  background: #00000000;
+}
+.scrollbar-thin:hover::-webkit-scrollbar-thumb {
+  background: #000;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #00000000;
+}

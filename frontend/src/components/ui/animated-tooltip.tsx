@@ -8,8 +8,10 @@ export const AnimatedTooltip = ({
   name,
   designation,
   children,
+  active = true,
 }: {
   id: number;
+  active?: boolean;
   name: string;
   designation: string;
   children: ReactNode;
@@ -39,7 +41,7 @@ export const AnimatedTooltip = ({
         onMouseEnter={() => setHoveredIndex(id)}
         onMouseLeave={() => setHoveredIndex(null)}
       >
-        {hoveredIndex === id && (
+        {hoveredIndex === id && active && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.6 }}
             animate={{

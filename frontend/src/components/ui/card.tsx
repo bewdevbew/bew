@@ -1,12 +1,29 @@
 import { cn } from "@/utils/ui";
 import { ArrowDownRight } from "lucide-react";
 import React, { ReactNode } from "react";
-
+type TVariant = "default" | "dot";
 type TFooter = {
   onClick?: any;
   value?: boolean;
   title?: ReactNode | string;
   children?: ReactNode;
+};
+
+export type CardType = {
+  variant?: TVariant;
+  children: ReactNode;
+  header?: {
+    icon?: any;
+    button?: ReactNode;
+    title: ReactNode;
+  };
+  onClick?: any;
+  height?: string;
+  style?: any;
+  padding?: string;
+  width?: string | number;
+  className?: string;
+  footer?: TFooter | true;
 };
 
 import { cva, type VariantProps } from "class-variance-authority";
@@ -25,8 +42,6 @@ const cardVariants = cva("bg-background", {
   },
 });
 
-type TVariant = "default" | "dot";
-
 export const Card = ({
   children,
   header,
@@ -38,22 +53,7 @@ export const Card = ({
   onClick,
   variant = "default",
   style,
-}: {
-  variant?: TVariant;
-  children: ReactNode;
-  header?: {
-    icon?: any;
-    button?: ReactNode;
-    title: ReactNode;
-  };
-  onClick?: any;
-  height?: string;
-  style?: any;
-  padding?: string;
-  width?: string | number;
-  className?: string;
-  footer?: TFooter | true;
-}) => {
+}: CardType) => {
   if (footer !== undefined && footer === true && header?.title) {
     footer = {
       title: `See more ${header?.title}`,
@@ -65,14 +65,18 @@ export const Card = ({
       style={style}
       className={cn(
         padding,
-        `${width} ${height}  shadow  flex border overflow-hidden rounded-lg flex-col`,
+        `${width} ${height}  shadow-lg  flex border overflow-hidden rounded-lg flex-col`,
         cardVariants({ variant }),
 
         className
       )}
     >
       {header ? (
-        <HeaderCard button={header.button} icon={header.icon} className="mb-3">
+        <HeaderCard
+          button={header.button}
+          icon={header.icon}
+          className="pb-3 border-b mb-2"
+        >
           {header.title}
         </HeaderCard>
       ) : (

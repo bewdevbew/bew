@@ -80,11 +80,12 @@ export const TokenNetworkView = ({ token }: { token: TokenReputationType }) => {
 
   return (
     <>
-      <Card className="">
-        <HeaderCard className="mb-4" icon={<Waypoints />}>
-          Token Network
-        </HeaderCard>
-
+      <Card
+        header={{
+          title: "Token Network",
+          icon: <Waypoints />,
+        }}
+      >
         <CategoryBar
           showLabels={false}
           values={(data || [])?.map((el) => Number(el.sponsor))}

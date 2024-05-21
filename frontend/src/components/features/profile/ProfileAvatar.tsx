@@ -7,12 +7,20 @@ import { getRandomPseudo, truncateAddress } from "@/utils/ux";
 import { Profile, useProfilesManaged } from "@lens-protocol/react-web";
 import React from "react";
 
+const colors = ["#00C9A7", "#FFB800", "#FF3D71", "#1E86FF"];
+
 export function ProfileAvatar({
   size = 80,
   address,
   profile,
+  color = 0,
+  showTooltip = false,
+  showBadge,
 }: {
   address?: `0x${string}`;
+  color?: number;
+  showTooltip?: boolean;
+  showBadge?: boolean;
   size?: number;
   profile?: Profile;
 }) {
@@ -40,6 +48,7 @@ export function ProfileAvatar({
 
   return (
     <AnimatedTooltip
+      active={showTooltip}
       name={infos.name}
       designation={truncateAddress(
         (address || profile?.ownedBy?.address) as any
@@ -50,12 +59,20 @@ export function ProfileAvatar({
         <img
           src={infos?.img}
           className="rounded-full border shadow"
-          style={{ width: size, height: size }}
+          style={{
+            width: size,
+            height: size,
+            maxWidth: size,
+            maxHeight: size,
+            minHeight: size,
+            minWidth: size,
+            backgroundColor: colors?.[color],
+          }}
         />
       ) : (
-        <AvatarUnknow seed={address} size={size} />
+        <AvatarUnknow color={colors?.[color]} seed={address} size={size} />
       )}
-      {data && data?.length > 1 && (
+      {data && data?.length > 1 && showBadge && (
         <Badge
           className="bg-info -translate-y-full text-white absolute absolute-0 right-0 translate-x-1/2"
           variant={"outline"}

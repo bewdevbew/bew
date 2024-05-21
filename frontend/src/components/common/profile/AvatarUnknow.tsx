@@ -4,11 +4,14 @@ import React, { useEffect, useState } from "react";
 import { createAvatar } from "@dicebear/core";
 import { lorelei } from "@dicebear/collection";
 import { ethers } from "ethers";
+import { cn } from "@/utils/ui";
 
 export const AvatarUnknow = ({
   seed = ethers.ZeroAddress,
+  color,
   size = 50,
 }: {
+  color?: string;
   seed?: string;
 
   size?: number;
@@ -37,24 +40,16 @@ export const AvatarUnknow = ({
         style={{
           width: `${size}px`,
           height: `${size}px`,
+          maxWidth: `${size}px`,
+          maxHeight: `${size}px`,
+          minHeight: `${size}px`,
+          minWidth: `${size}px`,
+          backgroundColor: color,
         }}
-        className={`shadow rounded-full border bg-background`}
+        className={cn(`shadow rounded-full border `, !color && "bg-background")}
         src={src}
-        alt={`avatar ${name}`}
+        alt={`avatar ${seed}`}
       />
     );
   }
-
-  return (
-    <div
-      style={{
-        width: `${size}px`,
-        height: `${size}px`,
-      }}
-      className={`flex shadow border items-center justify-center font-semibold  rounded-full bg-info/5 uppercase`}
-    >
-      {name?.[0]}
-      {name?.[1]}
-    </div>
-  );
 };

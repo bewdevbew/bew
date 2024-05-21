@@ -5,30 +5,23 @@ import { TextH } from "@/components/common/text/TextH";
 import { ProfileAvatar } from "@/components/features/profile/ProfileAvatar";
 import { TokenName } from "@/components/features/token/TokenName";
 import { TokenNetworkView } from "@/components/features/token/TokenNetworkView";
+import { AnimatedList } from "@/components/ui/animated-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { HeaderCard } from "@/components/ui/header-card";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
+import { Notification } from "@/components/ui/notification";
+
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/app";
 import { useForm } from "@/context/form";
 import { useContract } from "@/hooks/useContract";
-import {
-  ProgressBar,
-  Tab,
-  TabGroup,
-  TabList,
-  TabPanel,
-  TabPanels,
-} from "@tremor/react";
+import { ProgressBar } from "@tremor/react";
 
 import { ethers } from "ethers";
 
-import { BrainCircuit, Coins, Network, Variable, Workflow } from "lucide-react";
-
-import React, { ReactNode, useEffect, useState } from "react";
+import { BrainCircuit, Crown, Network, Variable, Workflow } from "lucide-react";
 
 const PageProfile = ({ params }: { params: { id: string } }) => {
   const { data: profile, isLoading } = useAuth();
@@ -70,6 +63,7 @@ const PageProfile = ({ params }: { params: { id: string } }) => {
     });
   };
 
+  console.log({ profile });
   return (
     <main className="flex p-10 gap-5 justify-center flex-1">
       <div className="flex flex-col gap-8">
@@ -150,27 +144,105 @@ const PageProfile = ({ params }: { params: { id: string } }) => {
           </div>
         </Card>
       </div>
-      <Card className="overflow-visible flex flex-col gap-3">
-        <HeaderCard icon={<BrainCircuit />}>
-          Legacy
-          <Badge className="ml-4">{profile?.token?.legacy}</Badge>
-        </HeaderCard>
-        {profile?.token?.events?.newTokenOnboarded?.map(
-          (el, i) =>
-            el.token !== profile.token.address && (
-              <div
-                key={`token-onboarded-${i}`}
-                className="border p-3 rounded-lg flex gap-10 items-center"
-              >
-                <ProfileAvatar address={el.to} />
-                <TokenName symbol address={el.token} />
-              </div>
-            )
-        )}
-        <Button variant={"default"} className="mt-4 text-lg">
-          Create new token
-        </Button>
-      </Card>
+      <div className="flex flex-col gap-8">
+        <Card
+          header={{
+            title: "Rules",
+            icon: <Crown />,
+          }}
+          className="overflow-visible flex flex-col gap-3"
+        >
+          <Notification
+            color={1}
+            name="Total Supply"
+            icon="🏦"
+            description={profile.token.supply}
+            className="border p-3 rounded-lg flex gap-10 items-center"
+            time="15m ago"
+          />
+          <Notification
+            color={1}
+            name="Admin Legacy fee"
+            icon="👶"
+            description={`${Number(
+              profile.token.rules.adminLegacyFeePercentage
+            )}%`}
+            className="border p-3 rounded-lg flex gap-10 items-center"
+            time="15m ago"
+          />
+          <Notification
+            color={2}
+            name="Admin Mint fee"
+            icon="👑"
+            description={`${Number(
+              profile.token.rules.adminRetainedTokensPercentage
+            )}%`}
+            className="border p-3 rounded-lg flex gap-10 items-center"
+            time="15m ago"
+          />
+          <Notification
+            color={3}
+            name="Network Participation fee"
+            icon="💎"
+            description={`${Number(
+              profile.token.rules.networkParticipationPercentage
+            )}%`}
+            className="border p-3 rounded-lg flex gap-10 items-center"
+            time="15m ago"
+          />
+          <Notification
+            color={4}
+            name="Admin Revocation fee"
+            icon="🛜"
+            description={`${Number(
+              profile.token.rules.adminRevokeFeePercentage
+            )}%`}
+            className="border p-3 rounded-lg flex gap-10 items-center"
+            time="15m ago"
+          />
+          <Notification
+            color={5}
+            name="Network Sub fee"
+            icon="🎁"
+            description={`${Number(
+              profile.token.rules.networkToChildAllocationPercentage
+            )}%`}
+            className="border p-3 rounded-lg flex gap-10 items-center"
+            time="15m ago"
+          />
+        </Card>
+
+        <AnimatedList
+          header={{
+            title: (
+              <>
+                Legacy
+                <Badge className="ml-4">{profile?.token?.legacy}</Badge>
+              </>
+            ),
+
+            icon: <BrainCircuit />,
+          }}
+          notifications={profile.token?.events?.newTokenOnboarded?.map(
+            (el, i) => ({
+              description: (
+                <>
+                  <TokenName address={el.token} />
+                </>
+              ),
+
+              avatar: <ProfileAvatar color={i} size={50} address={el.to} />,
+              name: "New token onboarded",
+              time: "15m ago",
+              color: i,
+            })
+          )}
+        >
+          <Button variant={"default"} className="mt-4 text-lg">
+            Create new token
+          </Button>
+        </AnimatedList>
+      </div>
     </main>
   );
 };
