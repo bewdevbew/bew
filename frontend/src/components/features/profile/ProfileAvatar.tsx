@@ -3,6 +3,7 @@ import { AvatarUnknow } from "@/components/common/profile/AvatarUnknow";
 import { AnimatedTooltip } from "@/components/ui/animated-tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/utils/ui";
 import { getRandomPseudo, truncateAddress } from "@/utils/ux";
 import { Profile, useProfilesManaged } from "@lens-protocol/react-web";
 import React from "react";
@@ -16,7 +17,9 @@ export function ProfileAvatar({
   color = 0,
   showTooltip = false,
   showBadge,
+  className,
 }: {
+  className?: string;
   address?: `0x${string}`;
   color?: number;
   showTooltip?: boolean;
@@ -58,7 +61,7 @@ export function ProfileAvatar({
       {infos?.img ? (
         <img
           src={infos?.img}
-          className="rounded-full border shadow"
+          className={cn("rounded-full border shadow", className)}
           style={{
             width: size,
             height: size,
@@ -70,7 +73,12 @@ export function ProfileAvatar({
           }}
         />
       ) : (
-        <AvatarUnknow color={colors?.[color]} seed={address} size={size} />
+        <AvatarUnknow
+          className={className}
+          color={colors?.[color]}
+          seed={address}
+          size={size}
+        />
       )}
       {data && data?.length > 1 && showBadge && (
         <Badge

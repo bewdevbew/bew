@@ -3,6 +3,7 @@
 import { AvatarUnknow } from "@/components/common/profile/AvatarUnknow";
 import { TextH } from "@/components/common/text/TextH";
 import { ProfileAvatar } from "@/components/features/profile/ProfileAvatar";
+import { ProfileName } from "@/components/features/profile/ProfileName";
 import { TokenName } from "@/components/features/token/TokenName";
 import { TokenNetworkView } from "@/components/features/token/TokenNetworkView";
 import { AnimatedList } from "@/components/ui/animated-list";
@@ -17,7 +18,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/app";
 import { useForm } from "@/context/form";
 import { useContract } from "@/hooks/useContract";
-import { ProgressBar } from "@tremor/react";
+import { cn } from "@/utils/ui";
+import { useLastLoggedInProfile } from "@lens-protocol/react-web";
+import { Callout, ProgressBar } from "@tremor/react";
 
 import { ethers } from "ethers";
 
@@ -63,7 +66,8 @@ const PageProfile = ({ params }: { params: { id: string } }) => {
     });
   };
 
-  console.log({ profile });
+  const { data: lens } = useLastLoggedInProfile({ for: params.id });
+  console.log({ profile, lens });
   return (
     <main className="flex p-10 gap-5 justify-center flex-1">
       <div className="flex flex-col gap-8">
@@ -138,6 +142,61 @@ const PageProfile = ({ params }: { params: { id: string } }) => {
               step={0.1}
               max={profile.token.balance}
             />
+
+            {!!getValue("tokenValue") && (
+              <Callout
+                className="whitespace-wrap w-[400px]"
+                title="Transaction"
+                color={getValue("tabs-expand-network") !== 1 ? "red" : "green"}
+              >
+                En envoyant des tokens :
+                <br />
+                <div className="">
+                  <ul className="list-disc italic list-outside">
+                    {
+                      [
+                        <>
+                          <li>
+                            Vous acceptez d'envoyer vos tokens au wallet d'un
+                            utilisateur
+                          </li>
+                          <li>Vous renoncez à la propriété de vos tokens</li>
+                          <li>
+                            Vous étendez la décentralisation de votre token
+                          </li>
+                          <li>
+                            Vous offrez le contenu exclusif lié à votre token
+                          </li>
+                        </>,
+                        <>
+                          <li>
+                            Vous acceptez de mettre en commun vos tokens de
+                            réputation avec un autre Network.
+                          </li>
+                          <li>
+                            Vous consentez à ce que le Network puisse utiliser
+                            vos tokens
+                          </li>
+                          <li>
+                            Vous êtes capable de retirer votre engagement à tout
+                            moment
+                          </li>
+                          <li>
+                            Vous pouvez profiter des contenus exclusif offert
+                            par le Network
+                          </li>
+                        </>,
+                      ][getValue("tabs-expand-network") || 0]
+                    }
+                  </ul>
+                </div>
+                <br />
+                <br />
+                N'oubliez pas que vous devez conserver 51% de vos tokens pour
+                pouvoir rester l'administrateur de ce réseau.
+              </Callout>
+            )}
+
             <Button onClick={sendToken} variant={"default"}>
               Send {getValue("tokenValue") || 0} {profile.token.symbol}
             </Button>
@@ -145,6 +204,50 @@ const PageProfile = ({ params }: { params: { id: string } }) => {
         </Card>
       </div>
       <div className="flex flex-col gap-8">
+        <Card>
+          <ProfileAvatar
+            profile={lens}
+            address={params.id as any}
+            className="rounded-lg"
+            size={300}
+          />
+          <ProfileName profile={(lens || params.id) as any} withHandle />
+
+          {lens && (
+            <>
+              <p className="font-light ">
+                {lens.metadata?.bio || "No bio available"}
+              </p>
+              <div className="flex gap-5">
+                {[
+                  {
+                    value: lens.stats?.followers,
+                    label: "Followers",
+                  },
+                  {
+                    value: lens.stats?.following,
+                    label: "Following",
+                  },
+                  {
+                    value: lens.globalStats?.lensClassifierScore,
+                    label: "Lens Score",
+                    className: "text-fuchsia-800",
+                  },
+                ].map((el, i) => (
+                  <div
+                    key={`lens-info-follow-${i}`}
+                    className={cn("flex flex-col", el?.className)}
+                  >
+                    <span className="font-extrabold text-xl">{el.value}</span>
+                    <p className="text-sm text-muted-foreground font-semibold">
+                      {el.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </Card>
         <Card
           header={{
             title: "Rules",

@@ -10,7 +10,9 @@ export const AvatarUnknow = ({
   seed = ethers.ZeroAddress,
   color,
   size = 50,
+  className,
 }: {
+  className?: string;
   color?: string;
   seed?: string;
 
@@ -46,7 +48,11 @@ export const AvatarUnknow = ({
           minWidth: `${size}px`,
           backgroundColor: color,
         }}
-        className={cn(`shadow rounded-full border `, !color && "bg-background")}
+        className={cn(
+          `shadow rounded-full border `,
+          !color && "bg-background",
+          className
+        )}
         src={src}
         alt={`avatar ${seed}`}
       />
