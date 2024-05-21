@@ -119,3 +119,36 @@ export const calculateDecentralizationScore = ({
   // Limiter entre 0 et 100
   return Number(Math.max(0, Math.min(100, score)).toFixed(2));
 };
+
+export const calculateOnboardToken = ({
+  networkParticipationPercentage,
+  networkToChildAllocationPercentage,
+  adminRetainedTokensPercentage,
+  childSupply,
+  networkSupply,
+  networkMaxSupply,
+}: {
+  networkParticipationPercentage: bigint;
+  networkToChildAllocationPercentage: bigint;
+  adminRetainedTokensPercentage: bigint;
+  childSupply: bigint;
+  networkSupply: `${number}`;
+  networkMaxSupply: bigint;
+}) => {
+  // Le network mine x% en fonction de la supply du token qu'il crée
+  let toNetwork = (childSupply * adminRetainedTokensPercentage) / 100n;
+  const networkMintValue =
+    (toNetwork * networkToChildAllocationPercentage) / 100n;
+  const childToAdmin = (toNetwork * networkParticipationPercentage) / 100n;
+  toNetwork -= childToAdmin;
+
+  return {
+    networkMint: ethers.formatEther(networkMintValue),
+    restNetworkSupply: ethers.formatEther(
+      networkMaxSupply - ethers.parseEther(networkSupply) - networkMintValue
+    ),
+    toNetwork: ethers.formatEther(toNetwork),
+    toAdmin: ethers.formatEther(childToAdmin),
+    toChildNetwork: ethers.formatEther(childSupply - toNetwork - childToAdmin),
+  };
+};

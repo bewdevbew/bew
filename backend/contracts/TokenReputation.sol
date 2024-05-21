@@ -232,11 +232,14 @@ contract TokenReputation is ERC20, Ownable {
      */
 
     function getInfo() public view returns (DataTypes.TokenInfo memory) {
+        address admin = iFactory.adminOf(address(this));
         return
             DataTypes.TokenInfo({
-                admin: iFactory.adminOf(address(this)),
+                admin: admin,
                 networkToken: iFactory.childTokenToNetworkTokens(address(this)),
                 name: name(),
+                balanceAdmin: balanceOf(admin),
+                balanceNetwork: poolTokensReputation[address(this)],
                 symbol: symbol(),
                 legacy: legacyLength,
                 totalSupply: totalSupply(),
@@ -274,6 +277,7 @@ contract TokenReputation is ERC20, Ownable {
      * @return The address of the new token reputation
      */
 
+    // TODO mint de la supply également pour l'ADMIN au taux de 1 pour 1
     function _onboardParticipant(
         address _for,
         string calldata _name,
@@ -374,6 +378,7 @@ contract TokenReputation is ERC20, Ownable {
         );
         poolTokensForSponsor[_sponsor][_erc20] -= _amount;
         ERC20(_erc20).transfer(msg.sender, _amount);
+        emit Events.WithdrawSponsorship(_erc20, msg.sender, _amount);
     }
 
     /**
@@ -411,6 +416,7 @@ contract TokenReputation is ERC20, Ownable {
         require(_amount > 0, Errors.AMOUNT_CANT_BE_ZERO);
         require(ERC20(_erc20).transferFrom(factory, address(this), _amount));
         poolTokensForSponsor[_for][_erc20] += _amount;
+        emit Events.DepositSponsorship(_erc20, _for, _amount);
     }
 
     /**
@@ -483,6 +489,7 @@ contract TokenReputation is ERC20, Ownable {
         return _depositReputation(msg.sender, _amount);
     }
 
+    // TODO retirer argument from et faire directement from = adminOf(msg.sender)
     function depositReputationFromWallet(
         address _from,
         uint _amount
@@ -507,7 +514,9 @@ contract TokenReputation is ERC20, Ownable {
                 _amount
             )
         );
+
         poolTokensReputation[msg.sender] += _amount;
+        emit Events.DepositReputation(msg.sender, _amount);
         return true;
     }
 

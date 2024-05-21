@@ -17,7 +17,7 @@ export function Header() {
     border-b flex
     flex-col sm:flex-row
     items-start sm:items-center
-    sm:pr-10
+    sm:pr-10 bg-background
     "
     >
       <div className="py-3 px-8 flex flex-1 items-center p">

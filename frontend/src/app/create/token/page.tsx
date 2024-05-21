@@ -19,12 +19,19 @@ import {
   Lollipop,
   Pilcrow,
   TestTubeDiagonal,
+  TrendingUp,
   Wand,
 } from "lucide-react";
 import React from "react";
-import { ProgressCircle } from "@tremor/react";
+import {
+  CategoryBar,
+  Legend,
+  ProgressBar,
+  ProgressCircle,
+} from "@tremor/react";
 import {
   calculateDecentralizationScore,
+  calculateOnboardToken,
   calculateRiskChildScore,
   calculateRiskNetworkScore,
 } from "@/utils/contract";
@@ -142,7 +149,29 @@ export default () => {
     });
   };
 
+  console.log({ token });
   if (isLoading) return <div>Loading...</div>;
+
+  const { networkMint, restNetworkSupply, toNetwork, toAdmin, toChildNetwork } =
+    calculateOnboardToken({
+      networkParticipationPercentage:
+        token.rules.networkParticipationPercentage,
+      networkToChildAllocationPercentage:
+        token.rules.networkToChildAllocationPercentage,
+      adminRetainedTokensPercentage: token.rules.adminRetainedTokensPercentage,
+      childSupply: token.rules.initialSupply,
+      networkSupply: token.supply,
+      networkMaxSupply: token.rules.maxSupply,
+    });
+
+  console.log({
+    networkMint,
+    restNetworkSupply,
+    token,
+    toNetwork,
+    toAdmin,
+    toChildNetwork,
+  });
   return (
     <main className="w-screen h-full flex  justify-center gap-10">
       <Card padding="p-0" className="w-[1500px]">
@@ -173,7 +202,7 @@ export default () => {
         <div className="w-full flex flex-col gap-10 border-t p-10">
           <div className="flex flex-col gap-4">
             <TextLabel icon={<TestTubeDiagonal />}>Token Settings</TextLabel>
-            <div className="flex gap-3 overflow-x-scroll">
+            <div className="flex gap-3 overflow-x-scroll scrollbar-thin">
               {Object.entries(DEW_STANDARD).map((el, i, arr) => (
                 <div
                   key={`standard-beam-${i}`}
@@ -267,7 +296,7 @@ export default () => {
             </div>
           </div>
 
-          <Button className="ml-auto" onClick={createToken}>
+          <Button variant="default" className="ml-auto" onClick={createToken}>
             Create Token
           </Button>
         </div>
@@ -350,6 +379,138 @@ export default () => {
             </div>
           </Card>
         </div>
+        <Card>
+          {token?.supply && token?.rules?.maxSupply && (
+            <>
+              <div className="flex justify-end gap-2 items-end">
+                <div className="flex flex-col text-end">
+                  <p className="font-bold text-4xl"> + {networkMint}</p>
+                  <p className="text-muted-foreground font-semibold text-xl">
+                    {token.symbol} mint & send
+                  </p>
+                </div>
+                <TrendingUp size={90} className="text-destructive mt-auto" />
+              </div>
+              <CategoryBar
+                showLabels={false}
+                // label={`${(
+                //   (Number(token.supply) /
+                //     Number(ethers.formatEther(token.rules.maxSupply))) *
+                //   100
+                // ).toFixed(2)}%`}
+                className="w-full"
+                colors={["green", "blue", "yellow", "red"]}
+                values={[
+                  (Number(token.balance) /
+                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100,
+                  ((Number(token.supply) - Number(token.balance)) /
+                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100,
+                  (Number(networkMint) /
+                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100,
+                  (Number(restNetworkSupply) /
+                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100,
+                ]}
+              />
+              <Legend
+                colors={["green", "blue", "yellow", "red"]}
+                categories={[
+                  `Network ${(
+                    (Number(token.balance) /
+                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100
+                  ).toFixed(2)}%`,
+                  `Circulating ${(
+                    ((Number(token.supply) - Number(token.balance)) /
+                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100
+                  ).toFixed(2)}%`,
+                  `Child ${(
+                    (Number(networkMint) /
+                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100
+                  ).toFixed(2)}%`,
+                  `Rest ${(
+                    (Number(restNetworkSupply) /
+                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100
+                  ).toFixed(2)}%`,
+                ]}
+              />
+            </>
+          )}
+        </Card>
+        <Card>
+          {token?.supply && token?.rules?.maxSupply && (
+            <>
+              <div className="flex justify-end gap-2 items-end">
+                <div className="flex flex-col text-end">
+                  <p className="font-bold text-4xl">
+                    + {Number(toAdmin) + Number(toChildNetwork)}
+                  </p>
+                  <p className="text-muted-foreground font-semibold text-xl">
+                    {getValue("symbol") || getValue("name") || "New token"} mint
+                    & send
+                  </p>
+                </div>
+                <TrendingUp size={90} className="text-success mt-auto" />
+              </div>
+              <CategoryBar
+                showLabels={false}
+                className="w-full"
+                colors={["green", "blue", "yellow", "fuchsia"]}
+                values={[
+                  (Number(toNetwork) /
+                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100,
+                  (Number(toAdmin) /
+                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100,
+                  (Number(toChildNetwork) /
+                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100,
+                  ((Number(ethers.formatEther(token.rules.maxSupply)) -
+                    (Number(toAdmin) +
+                      Number(toNetwork) +
+                      Number(toChildNetwork))) /
+                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100,
+                ]}
+              />
+              <Legend
+                colors={["green", "blue", "yellow", "fuchsia"]}
+                categories={[
+                  `Network ${(
+                    (Number(toNetwork) /
+                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100
+                  ).toFixed(2)}%`,
+                  `Admin ${(
+                    (Number(toAdmin) /
+                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100
+                  ).toFixed(2)}%`,
+                  `Child ${(
+                    (Number(toChildNetwork) /
+                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100
+                  ).toFixed(2)}%`,
+                  `Rest ${(
+                    ((Number(ethers.formatEther(token.rules.maxSupply)) -
+                      (Number(toAdmin) +
+                        Number(toNetwork) +
+                        Number(toChildNetwork))) /
+                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    100
+                  ).toFixed(2)}%`,
+                ]}
+              />
+            </>
+          )}
+        </Card>
         <Card padding="p-0">
           <div className=" bg-muted w-full p-5 ">
             <TextH>New Token</TextH>

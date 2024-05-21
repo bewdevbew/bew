@@ -43,6 +43,8 @@ library DataTypes {
         address networkToken;
         string name;
         string symbol;
+        uint256 balanceAdmin;
+        uint256 balanceNetwork;
         uint256 legacy;
         uint256 totalSupply;
         AdminRules rules;

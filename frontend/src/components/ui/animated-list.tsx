@@ -84,7 +84,7 @@ export function AnimatedListAnimatedItem({
 
 export function MyAnimatedList({
   header,
-  notifications,
+  notifications = [],
   children,
 }: {
   children?: React.ReactNode;

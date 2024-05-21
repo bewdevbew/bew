@@ -7,10 +7,10 @@ import React from "react";
 export const ProfileName = ({
   profile,
   className,
-  withHandle,
+  showHandle = false,
 }: {
   className?: string;
-  withHandle?: boolean;
+  showHandle?: boolean;
   profile: Profile | `0x${string}`;
 }) => {
   const data =
@@ -23,7 +23,7 @@ export const ProfileName = ({
           name: profile?.metadata?.displayName,
           bio: profile?.handle?.fullHandle,
         };
-  if (withHandle) {
+  if (showHandle) {
     return (
       <div className={cn("flex-col gap-1", className)}>
         <TextH>{data.name}</TextH>

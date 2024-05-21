@@ -66,6 +66,8 @@ export declare namespace DataTypes {
     networkToken: AddressLike;
     name: string;
     symbol: string;
+    balanceAdmin: BigNumberish;
+    balanceNetwork: BigNumberish;
     legacy: BigNumberish;
     totalSupply: BigNumberish;
     rules: DataTypes.AdminRulesStruct;
@@ -76,6 +78,8 @@ export declare namespace DataTypes {
     networkToken: string,
     name: string,
     symbol: string,
+    balanceAdmin: bigint,
+    balanceNetwork: bigint,
     legacy: bigint,
     totalSupply: bigint,
     rules: DataTypes.AdminRulesStructOutput
@@ -84,6 +88,8 @@ export declare namespace DataTypes {
     networkToken: string;
     name: string;
     symbol: string;
+    balanceAdmin: bigint;
+    balanceNetwork: bigint;
     legacy: bigint;
     totalSupply: bigint;
     rules: DataTypes.AdminRulesStructOutput;
@@ -142,9 +148,12 @@ export interface TokenReputationInterface extends Interface {
     nameOrSignatureOrTopic:
       | "Approval"
       | "DepositOnGovernance"
+      | "DepositReputation"
+      | "DepositSponsorship"
       | "NewTokenOnboarded"
       | "OwnershipTransferred"
       | "Transfer"
+      | "WithdrawSponsorship"
   ): EventFragment;
 
   encodeFunctionData(
@@ -449,6 +458,37 @@ export namespace DepositOnGovernanceEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace DepositReputationEvent {
+  export type InputTuple = [token: AddressLike, value: BigNumberish];
+  export type OutputTuple = [token: string, value: bigint];
+  export interface OutputObject {
+    token: string;
+    value: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace DepositSponsorshipEvent {
+  export type InputTuple = [
+    token: AddressLike,
+    from: AddressLike,
+    value: BigNumberish
+  ];
+  export type OutputTuple = [token: string, from: string, value: bigint];
+  export interface OutputObject {
+    token: string;
+    from: string;
+    value: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace NewTokenOnboardedEvent {
   export type InputTuple = [
     token: AddressLike,
@@ -489,6 +529,24 @@ export namespace TransferEvent {
   export type OutputTuple = [from: string, to: string, value: bigint];
   export interface OutputObject {
     from: string;
+    to: string;
+    value: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace WithdrawSponsorshipEvent {
+  export type InputTuple = [
+    token: AddressLike,
+    to: AddressLike,
+    value: BigNumberish
+  ];
+  export type OutputTuple = [token: string, to: string, value: bigint];
+  export interface OutputObject {
+    token: string;
     to: string;
     value: bigint;
   }
@@ -948,6 +1006,20 @@ export interface TokenReputation extends BaseContract {
     DepositOnGovernanceEvent.OutputObject
   >;
   getEvent(
+    key: "DepositReputation"
+  ): TypedContractEvent<
+    DepositReputationEvent.InputTuple,
+    DepositReputationEvent.OutputTuple,
+    DepositReputationEvent.OutputObject
+  >;
+  getEvent(
+    key: "DepositSponsorship"
+  ): TypedContractEvent<
+    DepositSponsorshipEvent.InputTuple,
+    DepositSponsorshipEvent.OutputTuple,
+    DepositSponsorshipEvent.OutputObject
+  >;
+  getEvent(
     key: "NewTokenOnboarded"
   ): TypedContractEvent<
     NewTokenOnboardedEvent.InputTuple,
@@ -967,6 +1039,13 @@ export interface TokenReputation extends BaseContract {
     TransferEvent.InputTuple,
     TransferEvent.OutputTuple,
     TransferEvent.OutputObject
+  >;
+  getEvent(
+    key: "WithdrawSponsorship"
+  ): TypedContractEvent<
+    WithdrawSponsorshipEvent.InputTuple,
+    WithdrawSponsorshipEvent.OutputTuple,
+    WithdrawSponsorshipEvent.OutputObject
   >;
 
   filters: {
@@ -990,6 +1069,28 @@ export interface TokenReputation extends BaseContract {
       DepositOnGovernanceEvent.InputTuple,
       DepositOnGovernanceEvent.OutputTuple,
       DepositOnGovernanceEvent.OutputObject
+    >;
+
+    "DepositReputation(address,uint256)": TypedContractEvent<
+      DepositReputationEvent.InputTuple,
+      DepositReputationEvent.OutputTuple,
+      DepositReputationEvent.OutputObject
+    >;
+    DepositReputation: TypedContractEvent<
+      DepositReputationEvent.InputTuple,
+      DepositReputationEvent.OutputTuple,
+      DepositReputationEvent.OutputObject
+    >;
+
+    "DepositSponsorship(address,address,uint256)": TypedContractEvent<
+      DepositSponsorshipEvent.InputTuple,
+      DepositSponsorshipEvent.OutputTuple,
+      DepositSponsorshipEvent.OutputObject
+    >;
+    DepositSponsorship: TypedContractEvent<
+      DepositSponsorshipEvent.InputTuple,
+      DepositSponsorshipEvent.OutputTuple,
+      DepositSponsorshipEvent.OutputObject
     >;
 
     "NewTokenOnboarded(address,address,uint256)": TypedContractEvent<
@@ -1023,6 +1124,17 @@ export interface TokenReputation extends BaseContract {
       TransferEvent.InputTuple,
       TransferEvent.OutputTuple,
       TransferEvent.OutputObject
+    >;
+
+    "WithdrawSponsorship(address,address,uint256)": TypedContractEvent<
+      WithdrawSponsorshipEvent.InputTuple,
+      WithdrawSponsorshipEvent.OutputTuple,
+      WithdrawSponsorshipEvent.OutputObject
+    >;
+    WithdrawSponsorship: TypedContractEvent<
+      WithdrawSponsorshipEvent.InputTuple,
+      WithdrawSponsorshipEvent.OutputTuple,
+      WithdrawSponsorshipEvent.OutputObject
     >;
   };
 }

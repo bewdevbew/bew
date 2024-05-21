@@ -52,6 +52,11 @@ export const useContract = <C extends keyof ContractType>(contract: C) => {
 
   return {
     post,
+    error,
+    isError,
+    isPending,
+    data,
+    ...rest,
     contract: getContract(contract) as ContractType[C],
   };
 };

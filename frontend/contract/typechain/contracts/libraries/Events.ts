@@ -25,7 +25,11 @@ export interface EventsInterface extends Interface {
     nameOrSignatureOrTopic:
       | "AirdropClaimed"
       | "DepositOnGovernance"
+      | "DepositReputation"
+      | "DepositSponsorship"
       | "NewTokenOnboarded"
+      | "WithdrawReputation"
+      | "WithdrawSponsorship"
   ): EventFragment;
 }
 
@@ -65,7 +69,74 @@ export namespace DepositOnGovernanceEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace DepositReputationEvent {
+  export type InputTuple = [token: AddressLike, value: BigNumberish];
+  export type OutputTuple = [token: string, value: bigint];
+  export interface OutputObject {
+    token: string;
+    value: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace DepositSponsorshipEvent {
+  export type InputTuple = [
+    token: AddressLike,
+    from: AddressLike,
+    value: BigNumberish
+  ];
+  export type OutputTuple = [token: string, from: string, value: bigint];
+  export interface OutputObject {
+    token: string;
+    from: string;
+    value: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace NewTokenOnboardedEvent {
+  export type InputTuple = [
+    token: AddressLike,
+    to: AddressLike,
+    value: BigNumberish
+  ];
+  export type OutputTuple = [token: string, to: string, value: bigint];
+  export interface OutputObject {
+    token: string;
+    to: string;
+    value: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace WithdrawReputationEvent {
+  export type InputTuple = [
+    token: AddressLike,
+    to: AddressLike,
+    value: BigNumberish
+  ];
+  export type OutputTuple = [token: string, to: string, value: bigint];
+  export interface OutputObject {
+    token: string;
+    to: string;
+    value: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace WithdrawSponsorshipEvent {
   export type InputTuple = [
     token: AddressLike,
     to: AddressLike,
@@ -145,11 +216,39 @@ export interface Events extends BaseContract {
     DepositOnGovernanceEvent.OutputObject
   >;
   getEvent(
+    key: "DepositReputation"
+  ): TypedContractEvent<
+    DepositReputationEvent.InputTuple,
+    DepositReputationEvent.OutputTuple,
+    DepositReputationEvent.OutputObject
+  >;
+  getEvent(
+    key: "DepositSponsorship"
+  ): TypedContractEvent<
+    DepositSponsorshipEvent.InputTuple,
+    DepositSponsorshipEvent.OutputTuple,
+    DepositSponsorshipEvent.OutputObject
+  >;
+  getEvent(
     key: "NewTokenOnboarded"
   ): TypedContractEvent<
     NewTokenOnboardedEvent.InputTuple,
     NewTokenOnboardedEvent.OutputTuple,
     NewTokenOnboardedEvent.OutputObject
+  >;
+  getEvent(
+    key: "WithdrawReputation"
+  ): TypedContractEvent<
+    WithdrawReputationEvent.InputTuple,
+    WithdrawReputationEvent.OutputTuple,
+    WithdrawReputationEvent.OutputObject
+  >;
+  getEvent(
+    key: "WithdrawSponsorship"
+  ): TypedContractEvent<
+    WithdrawSponsorshipEvent.InputTuple,
+    WithdrawSponsorshipEvent.OutputTuple,
+    WithdrawSponsorshipEvent.OutputObject
   >;
 
   filters: {
@@ -175,6 +274,28 @@ export interface Events extends BaseContract {
       DepositOnGovernanceEvent.OutputObject
     >;
 
+    "DepositReputation(address,uint256)": TypedContractEvent<
+      DepositReputationEvent.InputTuple,
+      DepositReputationEvent.OutputTuple,
+      DepositReputationEvent.OutputObject
+    >;
+    DepositReputation: TypedContractEvent<
+      DepositReputationEvent.InputTuple,
+      DepositReputationEvent.OutputTuple,
+      DepositReputationEvent.OutputObject
+    >;
+
+    "DepositSponsorship(address,address,uint256)": TypedContractEvent<
+      DepositSponsorshipEvent.InputTuple,
+      DepositSponsorshipEvent.OutputTuple,
+      DepositSponsorshipEvent.OutputObject
+    >;
+    DepositSponsorship: TypedContractEvent<
+      DepositSponsorshipEvent.InputTuple,
+      DepositSponsorshipEvent.OutputTuple,
+      DepositSponsorshipEvent.OutputObject
+    >;
+
     "NewTokenOnboarded(address,address,uint256)": TypedContractEvent<
       NewTokenOnboardedEvent.InputTuple,
       NewTokenOnboardedEvent.OutputTuple,
@@ -184,6 +305,28 @@ export interface Events extends BaseContract {
       NewTokenOnboardedEvent.InputTuple,
       NewTokenOnboardedEvent.OutputTuple,
       NewTokenOnboardedEvent.OutputObject
+    >;
+
+    "WithdrawReputation(address,address,uint256)": TypedContractEvent<
+      WithdrawReputationEvent.InputTuple,
+      WithdrawReputationEvent.OutputTuple,
+      WithdrawReputationEvent.OutputObject
+    >;
+    WithdrawReputation: TypedContractEvent<
+      WithdrawReputationEvent.InputTuple,
+      WithdrawReputationEvent.OutputTuple,
+      WithdrawReputationEvent.OutputObject
+    >;
+
+    "WithdrawSponsorship(address,address,uint256)": TypedContractEvent<
+      WithdrawSponsorshipEvent.InputTuple,
+      WithdrawSponsorshipEvent.OutputTuple,
+      WithdrawSponsorshipEvent.OutputObject
+    >;
+    WithdrawSponsorship: TypedContractEvent<
+      WithdrawSponsorshipEvent.InputTuple,
+      WithdrawSponsorshipEvent.OutputTuple,
+      WithdrawSponsorshipEvent.OutputObject
     >;
   };
 }

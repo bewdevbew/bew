@@ -25,7 +25,7 @@ export default function RootLayout({
       <body
         className={cn(
           inter.className,
-          "w-screen min-h-screen flex flex-col gap-4"
+          "w-screen bg-muted min-h-screen flex flex-col gap-4"
         )}
       >
         <Web3Provider>
