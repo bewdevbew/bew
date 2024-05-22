@@ -1,3 +1,4 @@
+"use client";
 import { SizeModule } from "../module/ui/size";
 import { VariantProps, cva } from "class-variance-authority";
 import { VariantsModule } from "../module/ui/variants";

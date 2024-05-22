@@ -10,7 +10,7 @@ import { useAccount } from "wagmi";
 import { DataTypes } from "../../../../contract/typechain/contracts/TokenReputation";
 import { useProfile } from "@/hooks/useApp";
 import { ethers } from "ethers";
-import { TextRotate } from "@/components/common/text/TextRotated";
+import { TextRotate } from "@/components/common/text/TextRotate";
 import { cn } from "@/utils/ui";
 import { motion } from "framer-motion";
 
