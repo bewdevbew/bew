@@ -31,6 +31,7 @@ export function Header() {
           {[
             { href: "/", label: "Home" },
             { href: "/protocol-test", label: "Protocol" },
+            { href: "/social", label: "Social" },
             { href: "/create/token", label: "Create" },
             { href: `/profile/${address}`, label: "Profile" },
           ].map(({ href, label }, i) => (

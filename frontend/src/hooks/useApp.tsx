@@ -30,9 +30,10 @@ export const useProfile = ({ address }: { address: `${string}` }) => {
         token: {
           name: info.name,
           symbol: info.symbol,
+          admin: info.admin as `0x${string}`,
           legacy: Number(info.legacy),
           supply: ethers.formatEther(info.totalSupply) as any,
-          network: info.networkToken as "0x${string}",
+          network: info.networkToken as `0x${string}`,
           balance: ethers.formatEther(balance) as any,
           balanceNetwork: ethers.formatEther(info.balanceNetwork) as any,
           balanceAdmin: ethers.formatEther(info.balanceAdmin) as any,

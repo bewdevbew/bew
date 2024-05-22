@@ -38,6 +38,7 @@ const placeholderData: AuthAppType["data"] = {
     symbol: "",
     legacy: 0,
     supply: "0",
+    admin: "0x",
     network: "0x",
     balanceAdmin: "0",
     balanceNetwork: "0",

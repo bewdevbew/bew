@@ -6,6 +6,7 @@ export type TokenReputationType = {
   name: string;
   symbol: string;
   legacy: number;
+  admin: `0x${string}`;
   supply: `${number}`;
   balance: `${number}`;
   network: `0x${string}`;

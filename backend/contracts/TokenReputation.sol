@@ -338,12 +338,16 @@ contract TokenReputation is ERC20, Ownable {
      * @dev Cette fonction ne peut être utilisé que par la factory.
      * Elle est appelé par FactoryTokenReputation.mint à la suite d'un onboardParticipant
      */
+
+    // TODO tester le mint pour admin
     function mint(uint _amount) public onlyFactory {
         require(
-            MAX_SUPPLY >= totalSupply() + _amount,
+            MAX_SUPPLY >= totalSupply() + (_amount * 2),
             Errors.OVERFLOW_MAX_SUPPLY
         );
         _mint(factory, _amount);
+        _mint(address(this), _amount);
+        poolTokensReputation[address(this)] += _amount;
     }
 
     /**

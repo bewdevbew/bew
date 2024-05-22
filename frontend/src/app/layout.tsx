@@ -7,6 +7,7 @@ import { Web3Provider } from "@/sections/provider/Web3Provider";
 import { AppProvider } from "@/context/app";
 import { Toaster } from "@/components/ui/toaster";
 import { Header } from "@/sections/layout/Header";
+import { AIPopupLayout } from "@/components/features/ai/AIPopupLayout";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -34,6 +35,7 @@ export default function RootLayout({
 
             {children}
             <Toaster />
+            <AIPopupLayout />
           </AppProvider>
         </Web3Provider>
       </body>
