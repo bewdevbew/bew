@@ -17,6 +17,8 @@ export type CardType = {
     button?: ReactNode;
     title: ReactNode;
   };
+  constraintsRef?: React.RefObject<HTMLDivElement>;
+  module?: "ADMIN" | "DEV" | "USER" | "USER SAFE" | "DEV SAFE";
   onClick?: any;
   height?: string;
   style?: any;
@@ -28,6 +30,8 @@ export type CardType = {
 
 import { cva, type VariantProps } from "class-variance-authority";
 import { HeaderCard } from "./header-card";
+import { useModule } from "@/hooks/useModule";
+import { motion } from "framer-motion";
 
 const cardVariants = cva("bg-background", {
   variants: {
@@ -44,12 +48,14 @@ const cardVariants = cva("bg-background", {
 
 export const Card = ({
   children,
+  constraintsRef,
   header,
   width = "min-w-[450px] ",
   height = "h-fit",
   className = " gap-2",
   padding = "p-4",
   footer,
+  module = "USER",
   onClick,
   variant = "default",
   style,
@@ -59,16 +65,21 @@ export const Card = ({
       title: `See more ${header?.title}`,
     };
   }
+
+  const { data: moduleSystem } = useModule();
+  const classNameModule = moduleSystem?.card?.className?.value;
+
   return (
-    <div
+    <motion.div
+      drag
+      dragConstraints={constraintsRef}
       onClick={onClick}
       style={style}
       className={cn(
         padding,
         `${width} ${height}  shadow-lg  flex border overflow-hidden rounded-lg flex-col`,
-        cardVariants({ variant }),
-
-        className
+        !["ADMIN", "DEV"].includes(module) && classNameModule,
+        cardVariants({ variant, className: className })
       )}
     >
       {header ? (
@@ -104,6 +115,6 @@ export const Card = ({
       ) : (
         <></>
       )}
-    </div>
+    </motion.div>
   );
 };

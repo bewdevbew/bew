@@ -5,7 +5,7 @@ import { TextLabel } from "../common/text/TextLabel";
 
 export interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  label: {
+  label?: {
     text: string;
     icon: React.ReactNode;
   };

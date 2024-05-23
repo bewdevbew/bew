@@ -241,6 +241,23 @@ export interface DewModuleCore {
     // dev: DewModuleBtn["custom"];
     // custom: DewModuleBtn["custom"];
   };
+  card: {
+    type: "default";
+    default: {
+      type: "card";
+      button: {
+        value: {
+          type: "ui";
+          ui: {
+            value: DewModuleSystem["ui_system"]["modules"]["value"];
+          };
+        };
+      };
+    };
+    // admin: DewModuleBtn["default"];
+    // dev: DewModuleBtn["custom"];
+    // custom: DewModuleBtn["custom"];
+  };
 
   // modules: {
   //   type: "default";

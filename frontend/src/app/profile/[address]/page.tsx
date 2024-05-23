@@ -39,6 +39,7 @@ import {
   Workflow,
 } from "lucide-react";
 import Link from "next/link";
+import { useRef } from "react";
 import { useAccount } from "wagmi";
 
 const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
@@ -92,11 +93,12 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
 
   const { rules } = token || { rules: undefined };
 
+  const constraintsRef = useRef(null);
   console.log({ session, lens, token, attributes });
   return (
-    <div className="flex p-10 gap-5 justify-center flex-1">
+    <div ref={constraintsRef} className="flex p-10 gap-5 justify-center flex-1">
       <div className="flex flex-col gap-8">
-        <Card>
+        <Card constraintsRef={constraintsRef}>
           {token?.supply && rules?.maxSupply && (
             <>
               <ProgressBar
@@ -121,6 +123,7 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
 
         {session.token?.address === token?.address && (
           <Card
+            constraintsRef={constraintsRef}
             header={{
               button: (
                 <div className="flex bg-muted p-1 gap-2 rounded-lg shadow border ml-auto h-fit my-auto">
@@ -232,6 +235,7 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
           </Card>
         )}
         <Card
+          constraintsRef={constraintsRef}
           header={{
             title: (
               <>
@@ -346,6 +350,7 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
       </div>
       <div className="flex flex-col gap-8">
         <Card
+          constraintsRef={constraintsRef}
           header={{
             title: "Lens Protocole",
             icon: (
@@ -458,6 +463,7 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
         </Card>
 
         <Card
+          constraintsRef={constraintsRef}
           header={{
             title: "Rules",
             icon: <Crown />,

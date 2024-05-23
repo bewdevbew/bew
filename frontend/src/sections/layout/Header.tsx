@@ -33,6 +33,7 @@ export function Header() {
             { href: "/protocol-test", label: "Protocol" },
             { href: "/social", label: "Social" },
             { href: "/create/token", label: "Create" },
+            { href: "/playground", label: "Playground" },
             { href: `/profile/${address}`, label: "Profile" },
           ].map(({ href, label }, i) => (
             <Link
