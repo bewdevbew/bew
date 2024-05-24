@@ -49,4 +49,14 @@ library DataTypes {
         uint256 totalSupply;
         AdminRules rules;
     }
+
+    struct TokenInteraction {
+        uint256 balanceToken;
+        uint256 balanceSponsorByAdmin;
+        uint256 balanceSponsorByToken;
+        uint256 balanceGovernance;
+        uint256 balanceAdmin;
+        uint256 balanceReputation;
+        // uint256 balanceNetwork;
+    }
 }

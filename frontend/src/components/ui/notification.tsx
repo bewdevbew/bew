@@ -6,7 +6,7 @@ export interface NotificationType {
   icon?: ReactNode;
   avatar?: ReactNode;
   color?: string | number;
-  time: string;
+  time?: string;
   className?: string;
 }
 
@@ -19,7 +19,7 @@ export const Notification = ({
   icon,
   avatar,
   color = defaultColor,
-  time,
+  time = "15m ago",
   className,
 }: NotificationType) => {
   if (typeof color === "number") {

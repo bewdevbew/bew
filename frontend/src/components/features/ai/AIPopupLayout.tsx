@@ -1,20 +1,16 @@
 "use client";
-import { Card } from "@/components/ui/card";
 import { useAuth } from "@/context/app";
-import { getContract } from "@/hooks/useContract";
 import { useQuery } from "@tanstack/react-query";
-import { AppContextType } from "next/dist/shared/lib/utils";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import { DataTypes } from "../../../../contract/typechain/contracts/TokenReputation";
-import { useProfile } from "@/hooks/useApp";
 import { ethers } from "ethers";
 import { TextRotate } from "@/components/common/text/TextRotate";
 import { cn } from "@/utils/ui";
 import { motion } from "framer-motion";
-import { Pencil } from "lucide-react";
 import Link from "next/link";
+import { useModule } from "@/hooks/useModule";
+import { useApi } from "@/hooks/useApi";
 
 /**
  *
@@ -26,14 +22,18 @@ import Link from "next/link";
  */
 export const AIPopupLayout = () => {
   const { data } = useAuth();
-  const { address } = useAccount();
 
   const pathname = usePathname();
   // Retirer le premier index
   const splitedPathname = pathname.split("/").filter((_, i) => i !== 0);
 
-  const { data: profileVisited } = useProfile({
-    address: splitedPathname?.[1] as `0x${string}`,
+  const { data: profileVisited } = useApi({
+    path: "/token/data",
+    params: {
+      address: splitedPathname?.[1],
+      peerAdminAddress: splitedPathname?.[1],
+    },
+    enabled: ethers.isAddress(splitedPathname?.[1]),
   });
 
   const getResponse = async () => {
@@ -90,7 +90,7 @@ export const AIPopupLayout = () => {
           text: `Invite our friends to ${token.name} and build together`,
         });
       }
-    } else if (profileVisited?.token?.admin) {
+    } else if (profileVisited?.admin) {
       text.push({
         text: `Hello, we are ${(profileVisited as any).name} ! Who are you ?`,
       });
@@ -125,7 +125,7 @@ export const AIPopupLayout = () => {
       case "profile":
         text.push({
           text: `Do we want to know more about ${
-            profileVisited?.token?.name || "this profile"
+            profileVisited?.name || "this profile"
           } ?`,
         });
         break;
@@ -139,6 +139,8 @@ export const AIPopupLayout = () => {
     queryKey: ["ai-popup", splitedPathname?.[0]],
     queryFn: getResponse,
   });
+
+  const { clean } = useModule();
 
   const [index, setIndex] = useState(0);
   const duration = 10000;
@@ -160,6 +162,24 @@ export const AIPopupLayout = () => {
       className="fixed bottom-10 right-8 min-h-[90px] min-w-[430px] w-[430px]"
     >
       <>
+        <motion.div
+          // transition={{ duration: 0.4, type: "spring" }}
+          // animate={{
+          //   top: onHover !== null ? -100 : 0,
+          // }}
+          // initial={{ top: onHover === null ? 0 : -100 }}
+          onClick={() => clean("ids")}
+          className={cn(
+            "font-bold overflow-visible absolute  left-0 border bg-destructive text-destructive-foreground shadow-2xl   flex-row transition hover:h-fit min-h-[90px]  flex items-center justify-between text-end h-[90px]  rounded-full  w-full uppercase pl-20 pr-10"
+          )}
+        >
+          <div className="w-full flex justify-between items-center">
+            <span className="bg-background text-2xl p-2 rounded-full shadow-2xl mr-3">
+              🚮
+            </span>
+            Clean modules system
+          </div>
+        </motion.div>
         <motion.div
           transition={{ duration: 0.4, type: "spring" }}
           animate={{

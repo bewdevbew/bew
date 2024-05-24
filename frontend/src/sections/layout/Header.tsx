@@ -10,6 +10,7 @@ import { useAccount } from "wagmi";
 export function Header() {
   const pathname = usePathname();
   const { address } = useAccount();
+
   return (
     <header
       style={{ zIndex: 100 }}
@@ -34,18 +35,21 @@ export function Header() {
             { href: "/social", label: "Social" },
             { href: "/create/token", label: "Create" },
             { href: "/playground", label: "Playground" },
-            { href: `/profile/${address}`, label: "Profile" },
-          ].map(({ href, label }, i) => (
-            <Link
-              href={href}
-              key={"header-link-" + i}
-              className={` ${
-                pathname === href ? "underline" : "opacity-50"
-              }  text-sm font-bold`}
-            >
-              <p>{label}</p>
-            </Link>
-          ))}
+            address && { href: `/profile/${address}`, label: "Profile" },
+          ].map(
+            (el, i) =>
+              el?.href && (
+                <Link
+                  href={el?.href}
+                  key={"header-link-" + i}
+                  className={` ${
+                    pathname === el?.href ? "underline" : "opacity-50"
+                  }  text-sm font-bold`}
+                >
+                  <p>{el?.label}</p>
+                </Link>
+              )
+          )}
         </div>
       </div>
       <div

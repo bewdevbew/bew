@@ -17,12 +17,15 @@ import { useToast } from "@/components/ui/use-toast";
 import { IcGithub } from "@/constants/icon";
 import { useAuth } from "@/context/app";
 import { useForm } from "@/context/form";
+import { useApi } from "@/hooks/useApi";
 import { useProfile } from "@/hooks/useApp";
 import { useContract } from "@/hooks/useContract";
+import { calculateTokenDominance } from "@/utils/contract";
 import { castLensAttributes } from "@/utils/lens";
 import { cn } from "@/utils/ui";
+import { formatNumber } from "@/utils/ux";
 import { useLastLoggedInProfile } from "@lens-protocol/react-web";
-import { Callout, ProgressBar } from "@tremor/react";
+import { Callout, DonutChart, Legend, ProgressBar } from "@tremor/react";
 
 import { ethers } from "ethers";
 
@@ -35,22 +38,22 @@ import {
   Hash,
   MapPinned,
   Network,
+  ShieldCheck,
   Variable,
   Workflow,
 } from "lucide-react";
 import Link from "next/link";
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 import { useAccount } from "wagmi";
 
 const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
   const { data: session, isLoading } = useAuth();
   console.log({ session });
-  const { address } = useAccount();
 
   const { post: postToken, ...rest } = useContract("token");
   const { getValue, set } = useForm();
   const { toast } = useToast();
-  console.log({ rest });
+
   const sendToken = async () => {
     const address = getValue("tokenDirection");
     let value = getValue("tokenValue");
@@ -93,26 +96,22 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
 
   const { rules } = token || { rules: undefined };
 
-  const constraintsRef = useRef(null);
-  console.log({ session, lens, token, attributes });
+  const dominances = calculateTokenDominance(token);
+
+  console.log({ session, dominances, lens, token, attributes });
   return (
-    <div ref={constraintsRef} className="flex p-10 gap-5 justify-center flex-1">
+    <div className="flex p-10 gap-5 justify-center flex-1">
       <div className="flex flex-col gap-8">
-        <Card constraintsRef={constraintsRef}>
+        <Card layoutId="card-profile-supply">
           {token?.supply && rules?.maxSupply && (
             <>
               <ProgressBar
                 label={`${(
-                  (Number(token?.supply) /
-                    Number(ethers.formatEther(rules?.maxSupply))) *
+                  (Number(token?.supply) / Number(rules?.maxSupply)) *
                   100
                 ).toFixed(2)}%`}
                 className="w-full"
-                value={
-                  (Number(token?.supply) /
-                    Number(ethers.formatEther(rules?.maxSupply))) *
-                  100
-                }
+                value={(Number(token?.supply) / Number(rules?.maxSupply)) * 100}
               />
             </>
           )}
@@ -123,7 +122,7 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
 
         {session.token?.address === token?.address && (
           <Card
-            constraintsRef={constraintsRef}
+            layoutId="card-profile-expand-network"
             header={{
               button: (
                 <div className="flex bg-muted p-1 gap-2 rounded-lg shadow border ml-auto h-fit my-auto">
@@ -235,7 +234,7 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
           </Card>
         )}
         <Card
-          constraintsRef={constraintsRef}
+          layoutId="card-profile-strengthens-network"
           header={{
             title: (
               <>
@@ -349,8 +348,131 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
         </Card>
       </div>
       <div className="flex flex-col gap-8">
+        <div className="flex gap-4">
+          {token?.interaction && (
+            <Card
+              header={{
+                title: "Relation with my Network",
+                icon: <ShieldCheck />,
+              }}
+              className="w-fit min-w-[100px] items-center gap-5"
+            >
+              {[
+                {
+                  value: token?.interaction?.peer?.balanceAdmin,
+                  label: (
+                    <>
+                      Wallet <ProfileName profile={lens || token?.admin} />
+                    </>
+                  ),
+                  time: session?.token?.symbol,
+                },
+                {
+                  value: token?.interaction?.peer?.balanceGovernance,
+                  label: "Governance Balance ",
+                  time: token?.symbol,
+                },
+                {
+                  value: token?.interaction?.peer?.balanceSponsorByAdmin,
+                  label: `Balance Network`,
+                  time: token?.symbol,
+                },
+                {
+                  value: token?.interaction?.peer?.balanceSponsorByToken,
+                  label: `Balance ${token?.symbol} (on network)`,
+                  time: session?.token?.symbol,
+                },
+                {
+                  value: token?.interaction?.peer?.balanceReputation,
+                  label: `Balance Reputation ${token?.symbol}`,
+                  time: token?.symbol,
+                },
+                {
+                  value: token?.interaction?.peer?.balanceToken,
+                  label: `Balance ${token?.symbol} (out network)`,
+                  time: session?.token?.symbol,
+                },
+              ].map((el, i) => (
+                <Notification
+                  key={i}
+                  time={el.time}
+                  icon={
+                    {
+                      [session.token.symbol]: (
+                        <ProfileAvatar
+                          size={30}
+                          address={session?.token?.admin}
+                          profile={session?.lens}
+                        />
+                      ),
+
+                      [token.symbol]: (
+                        <ProfileAvatar
+                          size={30}
+                          address={token?.admin}
+                          profile={lens}
+                        />
+                      ),
+                    }[el.time]
+                  }
+                  description={el.label}
+                  name={<>{formatNumber(el.value as any)}</>}
+                />
+              ))}
+              {/* <DonutChart
+                data={}
+                category="value"
+                index="label"
+                valueFormatter={() =>
+                  `% ${dominances.admin + dominances.network}`
+                }
+                colors={["green", "cyan", "red"]}
+                className="w-40"
+              /> */}
+              <Legend
+                categories={["Admin", "Network", "Others"]}
+                colors={["green", "cyan", "red"]}
+                className="max-w-xs"
+              />
+            </Card>
+          )}
+          <Card
+            header={{ title: "Admin dominance", icon: <ShieldCheck /> }}
+            className="w-fit min-w-[100px] items-center gap-5"
+          >
+            <DonutChart
+              data={[
+                {
+                  value: dominances.admin,
+                  label: "Admin",
+                },
+                {
+                  value: dominances.network,
+                  label: "Network",
+                },
+                {
+                  value: 100 - dominances.admin - dominances.network,
+                  label: "Others",
+                },
+              ]}
+              category="value"
+              index="label"
+              valueFormatter={() =>
+                `% ${dominances.admin + dominances.network}`
+              }
+              colors={["green", "cyan", "red"]}
+              className="w-40"
+            />
+            <Legend
+              categories={["Admin", "Network", "Others"]}
+              colors={["green", "cyan", "red"]}
+              className="max-w-xs"
+            />
+          </Card>
+        </div>
+
         <Card
-          constraintsRef={constraintsRef}
+          layoutId="card-profile-lens"
           header={{
             title: "Lens Protocole",
             icon: (
@@ -463,7 +585,7 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
         </Card>
 
         <Card
-          constraintsRef={constraintsRef}
+          layoutId="card-profile-token-rules"
           header={{
             title: "Rules",
             icon: <Crown />,
@@ -474,7 +596,9 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
             color={1}
             name="Total Supply"
             icon="🏦"
-            description={token?.supply}
+            description={`${token?.symbol} ${formatNumber(
+              token?.supply
+            ).toString()}`}
             className="border p-3 rounded-lg flex gap-10 items-center"
             time="15m ago"
           />
@@ -550,7 +674,11 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
             color: i,
           }))}
         >
-          <Button variant={"default"} className="mt-auto text-lg">
+          <Button
+            href="/create/token"
+            variant={"default"}
+            className="mt-auto text-lg"
+          >
             Create new token
           </Button>
         </AnimatedList>

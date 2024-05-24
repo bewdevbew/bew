@@ -149,8 +149,10 @@ export default () => {
     });
   };
 
-  console.log({ token });
-  if (isLoading) return <div>Loading...</div>;
+  console.log({ testtoken: token, isLoading });
+  if (isLoading || token?.address === "0x") {
+    return <div>Loading...</div>;
+  }
 
   const { networkMint, restNetworkSupply, toNetwork, toAdmin, toChildNetwork } =
     calculateOnboardToken({
@@ -283,13 +285,13 @@ export default () => {
                 target="initialSupply"
                 type="number"
                 className="w-full"
-                value={ethers.formatEther(token?.rules?.initialSupply || "0")}
+                value={token?.rules?.initialSupply || "0"}
                 placeholder="Initial Supply"
               />
               <Input
                 target="maxSupply"
                 type="number"
-                value={ethers.formatEther(token?.rules?.maxSupply || "0")}
+                value={token?.rules?.maxSupply || "0"}
                 className="w-full"
                 placeholder="Max Supply"
               />
@@ -319,11 +321,9 @@ export default () => {
               </ProgressCircle>
               <div>
                 <p className="text-tremor-default text-tremor-content-strong dark:text-dark-tremor-content-strong font-medium">
-                  {ethers.formatEther(
-                    (token?.rules?.initialSupply *
-                      BigInt(token?.rules?.adminRetainedTokensPercentage)) /
-                      100n
-                  )}{" "}
+                  {(Number(token?.rules?.initialSupply) *
+                    Number(token?.rules?.adminRetainedTokensPercentage)) /
+                    100}{" "}
                   {getValue("name")} ({risks.network}
                   %)
                 </p>
@@ -346,8 +346,7 @@ export default () => {
               </ProgressCircle>
               <div>
                 <p className="text-tremor-default text-tremor-content-strong dark:text-dark-tremor-content-strong font-medium">
-                  {ethers.formatEther(token.rules.initialSupply)} ChildToken (
-                  {risks.child}
+                  {token.rules.initialSupply} ChildToken ({risks.child}
                   %)
                 </p>
                 <p className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
@@ -395,23 +394,18 @@ export default () => {
                 showLabels={false}
                 // label={`${(
                 //   (Number(token.supply) /
-                //     Number(ethers.formatEther(token.rules.maxSupply))) *
+                //     Number((token.rules.maxSupply))) *
                 //   100
                 // ).toFixed(2)}%`}
                 className="w-full"
                 colors={["green", "blue", "yellow", "red"]}
                 values={[
-                  (Number(token.balance) /
-                    Number(ethers.formatEther(token.rules.maxSupply))) *
-                    100,
+                  (Number(token.balance) / Number(token.rules.maxSupply)) * 100,
                   ((Number(token.supply) - Number(token.balance)) /
-                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                    Number(token.rules.maxSupply)) *
                     100,
-                  (Number(networkMint) /
-                    Number(ethers.formatEther(token.rules.maxSupply))) *
-                    100,
-                  (Number(restNetworkSupply) /
-                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                  (Number(networkMint) / Number(token.rules.maxSupply)) * 100,
+                  (Number(restNetworkSupply) / Number(token.rules.maxSupply)) *
                     100,
                 ]}
               />
@@ -419,23 +413,21 @@ export default () => {
                 colors={["green", "blue", "yellow", "red"]}
                 categories={[
                   `Network ${(
-                    (Number(token.balance) /
-                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    (Number(token.balance) / Number(token.rules.maxSupply)) *
                     100
                   ).toFixed(2)}%`,
                   `Circulating ${(
                     ((Number(token.supply) - Number(token.balance)) /
-                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                      Number(token.rules.maxSupply)) *
                     100
                   ).toFixed(2)}%`,
                   `Child ${(
-                    (Number(networkMint) /
-                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    (Number(networkMint) / Number(token.rules.maxSupply)) *
                     100
                   ).toFixed(2)}%`,
                   `Rest ${(
                     (Number(restNetworkSupply) /
-                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                      Number(token.rules.maxSupply)) *
                     100
                   ).toFixed(2)}%`,
                 ]}
@@ -463,20 +455,15 @@ export default () => {
                 className="w-full"
                 colors={["green", "blue", "yellow", "fuchsia"]}
                 values={[
-                  (Number(toNetwork) /
-                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                  (Number(toNetwork) / Number(token.rules.maxSupply)) * 100,
+                  (Number(toAdmin) / Number(token.rules.maxSupply)) * 100,
+                  (Number(toChildNetwork) / Number(token.rules.maxSupply)) *
                     100,
-                  (Number(toAdmin) /
-                    Number(ethers.formatEther(token.rules.maxSupply))) *
-                    100,
-                  (Number(toChildNetwork) /
-                    Number(ethers.formatEther(token.rules.maxSupply))) *
-                    100,
-                  ((Number(ethers.formatEther(token.rules.maxSupply)) -
+                  ((Number(token.rules.maxSupply) -
                     (Number(toAdmin) +
                       Number(toNetwork) +
                       Number(toChildNetwork))) /
-                    Number(ethers.formatEther(token.rules.maxSupply))) *
+                    Number(token.rules.maxSupply)) *
                     100,
                 ]}
               />
@@ -484,26 +471,23 @@ export default () => {
                 colors={["green", "blue", "yellow", "fuchsia"]}
                 categories={[
                   `Network ${(
-                    (Number(toNetwork) /
-                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    (Number(toNetwork) / Number(token.rules.maxSupply)) *
                     100
                   ).toFixed(2)}%`,
                   `Admin ${(
-                    (Number(toAdmin) /
-                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    (Number(toAdmin) / Number(token.rules.maxSupply)) *
                     100
                   ).toFixed(2)}%`,
                   `Child ${(
-                    (Number(toChildNetwork) /
-                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                    (Number(toChildNetwork) / Number(token.rules.maxSupply)) *
                     100
                   ).toFixed(2)}%`,
                   `Rest ${(
-                    ((Number(ethers.formatEther(token.rules.maxSupply)) -
+                    ((Number(token.rules.maxSupply) -
                       (Number(toAdmin) +
                         Number(toNetwork) +
                         Number(toChildNetwork))) /
-                      Number(ethers.formatEther(token.rules.maxSupply))) *
+                      Number(token.rules.maxSupply)) *
                     100
                   ).toFixed(2)}%`,
                 ]}
@@ -543,14 +527,11 @@ export default () => {
                   {
                     label: "Initial supply",
                     value:
-                      getValue("initialSupply") ||
-                      ethers.formatEther(token.rules.initialSupply),
+                      getValue("initialSupply") || token.rules.initialSupply,
                   },
                   {
                     label: "Max supply",
-                    value:
-                      getValue("maxSupply") ||
-                      ethers.formatEther(token.rules.maxSupply),
+                    value: getValue("maxSupply") || token.rules.maxSupply,
                   },
                 ],
               },
@@ -563,13 +544,11 @@ export default () => {
                     value: (
                       <>
                         +{" "}
-                        {ethers.formatEther(
-                          (((token.rules.initialSupply *
-                            token.rules.adminRetainedTokensPercentage) /
-                            100n) *
-                            token.rules.networkParticipationPercentage) /
-                            100n
-                        )}{" "}
+                        {(((Number(token.rules.initialSupply) *
+                          Number(token.rules.adminRetainedTokensPercentage)) /
+                          100) *
+                          Number(token.rules.networkParticipationPercentage)) /
+                          100}{" "}
                         <LineChart />
                       </>
                     ),
@@ -581,16 +560,16 @@ export default () => {
                     value: (
                       <>
                         +
-                        {ethers.formatEther(
-                          (token.rules.initialSupply *
-                            token.rules.adminRetainedTokensPercentage) /
-                            100n -
-                            (((token.rules.initialSupply *
-                              token.rules.adminRetainedTokensPercentage) /
-                              100n) *
-                              token.rules.networkParticipationPercentage) /
-                              100n
-                        )}
+                        {(Number(token.rules.initialSupply) *
+                          Number(token.rules.adminRetainedTokensPercentage)) /
+                          100 -
+                          (((Number(token.rules.initialSupply) *
+                            Number(token.rules.adminRetainedTokensPercentage)) /
+                            100) *
+                            Number(
+                              token.rules.networkParticipationPercentage
+                            )) /
+                            100}
                         <LineChart />
                       </>
                     ),
@@ -602,12 +581,10 @@ export default () => {
                     value: (
                       <>
                         +
-                        {ethers.formatEther(
-                          token.rules.initialSupply -
-                            (token.rules.initialSupply *
-                              token.rules.adminRetainedTokensPercentage) /
-                              100n
-                        )}
+                        {Number(token.rules.initialSupply) -
+                          (Number(token.rules.initialSupply) *
+                            Number(token.rules.adminRetainedTokensPercentage)) /
+                            100}
                         <LineChart />
                       </>
                     ),
@@ -618,13 +595,13 @@ export default () => {
                     value: (
                       <>
                         -
-                        {ethers.formatEther(
-                          (((token.rules.initialSupply *
-                            token.rules.adminRetainedTokensPercentage) /
-                            100n) *
-                            token.rules.networkToChildAllocationPercentage) /
-                            100n
-                        )}
+                        {(((Number(token.rules.initialSupply) *
+                          Number(token.rules.adminRetainedTokensPercentage)) /
+                          100) *
+                          Number(
+                            token.rules.networkToChildAllocationPercentage
+                          )) /
+                          100}
                         <LineChart />
                       </>
                     ),
@@ -645,9 +622,10 @@ export default () => {
                     label: `Admin fees`,
                     value: (
                       <>
-                        {Number(
-                          100n - token.rules.networkParticipationPercentage
-                        )}{" "}
+                        {100 -
+                          Number(
+                            token.rules.networkParticipationPercentage
+                          )}{" "}
                         %
                       </>
                     ),

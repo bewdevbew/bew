@@ -10,6 +10,16 @@ export const useModule = () => {
     return system;
   };
 
+  const clean = (target: "all" | "ids") => {
+    if (typeof window === "undefined") return {};
+    if (target === "all") {
+      localStorage.removeItem("system");
+    } else {
+      const newSystem = { ...o.data, [target]: undefined };
+      localStorage.setItem("system", JSON.stringify(newSystem));
+    }
+  };
+
   const [queryIndex, setQueryIndex] = useState(0);
   const set = <K extends keyof DewModuleCore>(
     module: K,
@@ -20,7 +30,7 @@ export const useModule = () => {
       "system",
       JSON.stringify({
         ...o.data,
-        [module]: value.getModule(),
+        [module]: value?.getModule?.() || value,
       } as ModuleValue<K>)
     );
     setQueryIndex(queryIndex + 1);
@@ -35,5 +45,6 @@ export const useModule = () => {
     ...o,
     data: o.data,
     set: set as typeof set,
+    clean: clean as typeof clean,
   };
 };

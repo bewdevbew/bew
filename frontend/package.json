@@ -29,6 +29,7 @@
     "class-variance-authority": "^0.7.0",
     "connectkit": "^1.7.3",
     "crypto-js": "^4.2.0",
+    "encoding": "^0.1.13",
     "ethers": "^6.12.1",
     "lucide-react": "^0.378.0",
     "mini-svg-data-uri": "^1.4.4",

@@ -2,37 +2,31 @@
 import { ProfileAvatar } from "@/components/features/profile/ProfileAvatar";
 import { ProfileName } from "@/components/features/profile/ProfileName";
 import { Card } from "@/components/ui/card";
-import { useAuth } from "@/context/app";
+
 import { useProfile } from "@/hooks/useApp";
 import { cn } from "@/utils/ui";
 import {
   Badge,
   BrickWall,
+  Diamond,
   LayoutDashboard,
   LogOut,
-  NotebookPen,
   ScanFace,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
+import { useParams, usePathname } from "next/navigation";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const params: { address: `0x${string}` } = useParams();
+
   const { data: profile } = useProfile({ address: params.address });
   const address = params.address;
 
-  const [url, setUrl] = useState<string | false>(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setUrl(window.location.pathname);
-    }
-  }, [window?.location?.pathname]);
+  const pathname = usePathname();
 
   return (
     <main className="w-screen h-full flex gap-10 p-10 ">
@@ -49,7 +43,7 @@ export default function RootLayout({
 
             <ProfileName profile={(profile?.lens || address) as any} />
           </div>
-          <Card padding="px-10 py-5" className="gap-10">
+          <div className="px-10 flex flex-col bg-background rounded-2xl shadow-2xl border py-5 gap-10">
             <p className=" text-muted-foreground">
               {profile?.lens?.handle?.fullHandle || "Menu"}
             </p>
@@ -75,13 +69,18 @@ export default function RootLayout({
                   href: `/profile/${address}`,
                   icon: <BrickWall />,
                 },
+                {
+                  name: "Peer",
+                  href: `/profile/${address}/peer`,
+                  icon: <Diamond />,
+                },
               ].map((el, i) => (
                 <Link
                   href={el.href}
                   key={`menu-layout-profile-${i}`}
                   className={cn(
                     "flex hover:text-info items-center gap-4 text-muted-foreground text-xl",
-                    el.href === url && "text-info"
+                    el.href === pathname && "text-info"
                   )}
                 >
                   {el.icon}
@@ -93,7 +92,7 @@ export default function RootLayout({
                 <span className="font-medium text-xl">Logout</span>
               </a>
             </div>
-          </Card>
+          </div>
         </div>
       </Card>
       <>{children}</>

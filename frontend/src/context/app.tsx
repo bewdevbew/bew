@@ -4,17 +4,10 @@ import React, { createContext, useContext, ReactNode } from "react";
 import { useAccount } from "wagmi";
 import { FormProvider } from "./form";
 import { Header } from "@/sections/layout/Header";
-import { useQuery } from "@tanstack/react-query";
-import { ethers } from "ethers";
-import { DataTypes } from "../../contract/typechain/contracts/TokenReputation";
-import { getContract, useContract } from "@/hooks/useContract";
-import {
-  Profile,
-  useLastLoggedInProfile,
-  useLogin,
-  useSession,
-} from "@lens-protocol/react-web";
+
+import { Profile } from "@lens-protocol/react-web";
 import { TokenReputationType } from "@/types/dew/contract";
+import { useQuery } from "@tanstack/react-query";
 import { useProfile } from "@/hooks/useApp";
 
 // Définition du type pour le contexte du formulaire
@@ -54,30 +47,38 @@ const placeholderData: AuthAppType["data"] = {
 export const AppProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const { address } = useAccount();
-
-  const { data, isLoading, isSuccess, isError, isFetched } = useProfile({
-    address: address || "0x",
-  });
-
-  console.log({ data });
-
   return (
-    <AppContext.Provider
-      value={{
-        data: isSuccess && data?.token ? data : placeholderData,
-        isLoading: !isFetched,
-        isError,
-        isSuccess,
-      }}
-    >
+    <Layout>
       <FormProvider>
         <>
           <Header />
           {children}
         </>
       </FormProvider>
-    </AppContext.Provider>
+    </Layout>
+  );
+};
+
+const Layout = ({ children }: { children: ReactNode }) => {
+  const { address } = useAccount();
+
+  const { data, isLoading, isSuccess, isError } = useProfile({
+    address: address || "0x",
+  });
+
+  return (
+    <>
+      <AppContext.Provider
+        value={{
+          data: data?.token ? data : placeholderData,
+          isLoading,
+          isError,
+          isSuccess,
+        }}
+      >
+        <>{children}</>
+      </AppContext.Provider>
+    </>
   );
 };
 
@@ -85,7 +86,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 export const useAuth = (): AuthAppType => {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error("useForm must be used within a AppProvider");
+    throw new Error("useAuth must be used within a AppProvider");
   }
   return context;
 };

@@ -781,6 +781,57 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "_token",
+          "type": "address"
+        }
+      ],
+      "name": "getInfoInteraction",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "balanceToken",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "balanceSponsorByAdmin",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "balanceSponsorByToken",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "balanceGovernance",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "balanceAdmin",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "balanceReputation",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct DataTypes.TokenInteraction",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "",
           "type": "address"
         }

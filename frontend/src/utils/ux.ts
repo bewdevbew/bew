@@ -25,3 +25,6 @@ export const truncateAddress = (address: string) => {
     address.length - 4
   )}`;
 };
+
+export const formatNumber = (number: number | `${number}`) =>
+  Intl.NumberFormat("us").format(Number(number)).toString();

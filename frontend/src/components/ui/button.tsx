@@ -8,6 +8,7 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/utils/ui";
 import { useModule } from "@/hooks/useModule";
+import Link from "next/link";
 
 const defaultVariants = new VariantsModule({
   state: "outline",
@@ -59,17 +60,47 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   module?: "ADMIN" | "USER" | "USER SAFE" | "DEV" | "DEV SAFE";
+  href?: string;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className, module = "USER", variant, size, asChild = false, ...props },
+    {
+      className,
+      href,
+      module = "USER",
+      variant,
+      size,
+      asChild = false,
+      ...props
+    },
     ref
   ) => {
     const Comp = asChild ? Slot : "button";
 
     const { data: moduleSystem } = useModule();
     const classNameModule = moduleSystem?.button?.className?.value;
+
+    if (href) {
+      return (
+        <Link
+          className={cn(
+            buttonVariants({
+              variant,
+              size,
+              className:
+                !["ADMIN", "DEV", "DEV_SAFE"].includes(module) &&
+                classNameModule,
+            }),
+            className
+          )}
+          href={href}
+          style={props.style}
+        >
+          {props?.children}
+        </Link>
+      );
+    }
 
     return (
       <Comp

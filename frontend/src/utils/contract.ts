@@ -4,6 +4,9 @@ import {
   TokenReputation,
   TokenReputationFactory,
 } from "../../contract/typechain";
+import { getContract } from "@/hooks/useContract";
+import { AuthAppType } from "@/context/app";
+import { TokenReputationType } from "@/types/dew/contract";
 
 export type ContractType = {
   token: TokenReputation;
@@ -128,27 +131,51 @@ export const calculateOnboardToken = ({
   networkSupply,
   networkMaxSupply,
 }: {
-  networkParticipationPercentage: bigint;
-  networkToChildAllocationPercentage: bigint;
-  adminRetainedTokensPercentage: bigint;
-  childSupply: bigint;
+  networkParticipationPercentage: `${number}`;
+  networkToChildAllocationPercentage: `${number}`;
+  adminRetainedTokensPercentage: `${number}`;
+  childSupply: `${number}`;
   networkSupply: `${number}`;
-  networkMaxSupply: bigint;
+  networkMaxSupply: `${number}`;
 }) => {
-  // Le network mine x% en fonction de la supply du token qu'il crée
-  let toNetwork = (childSupply * adminRetainedTokensPercentage) / 100n;
-  const networkMintValue =
-    (toNetwork * networkToChildAllocationPercentage) / 100n;
-  const childToAdmin = (toNetwork * networkParticipationPercentage) / 100n;
-  toNetwork -= childToAdmin;
+  try {
+    // Le network mine x% en fonction de la supply du token qu'il crée
+    let toNetwork =
+      (Number(childSupply) * Number(adminRetainedTokensPercentage)) / 100;
+    const networkMintValue =
+      (toNetwork * Number(networkToChildAllocationPercentage)) / 100;
+    const childToAdmin =
+      (toNetwork * Number(networkParticipationPercentage)) / 100;
+    toNetwork -= childToAdmin;
 
+    return {
+      networkMint: networkMintValue,
+      restNetworkSupply:
+        Number(networkMaxSupply) - Number(networkSupply) - networkMintValue,
+      toNetwork: toNetwork,
+      toAdmin: childToAdmin,
+      toChildNetwork: Number(childSupply) - toNetwork - childToAdmin,
+    };
+  } catch (error) {
+    return {
+      networkMint: 0,
+      restNetworkSupply: 0,
+      toNetwork: 0,
+      toAdmin: 0,
+      toChildNetwork: 0,
+    };
+  }
+};
+
+export const calculateTokenDominance = ({
+  balanceAdmin,
+  supply,
+  balanceNetwork,
+}: TokenReputationType) => {
+  // Le network mine x% en fonction de la supply du token qu'il crée
+  console.log({ balanceAdmin, supply, balanceNetwork });
   return {
-    networkMint: ethers.formatEther(networkMintValue),
-    restNetworkSupply: ethers.formatEther(
-      networkMaxSupply - ethers.parseEther(networkSupply) - networkMintValue
-    ),
-    toNetwork: ethers.formatEther(toNetwork),
-    toAdmin: ethers.formatEther(childToAdmin),
-    toChildNetwork: ethers.formatEther(childSupply - toNetwork - childToAdmin),
+    admin: (Number(balanceAdmin) / Number(supply)) * 100,
+    network: (Number(balanceNetwork) / Number(supply)) * 100,
   };
 };

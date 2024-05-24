@@ -94,6 +94,31 @@ export declare namespace DataTypes {
     totalSupply: bigint;
     rules: DataTypes.AdminRulesStructOutput;
   };
+
+  export type TokenInteractionStruct = {
+    balanceToken: BigNumberish;
+    balanceSponsorByAdmin: BigNumberish;
+    balanceSponsorByToken: BigNumberish;
+    balanceGovernance: BigNumberish;
+    balanceAdmin: BigNumberish;
+    balanceReputation: BigNumberish;
+  };
+
+  export type TokenInteractionStructOutput = [
+    balanceToken: bigint,
+    balanceSponsorByAdmin: bigint,
+    balanceSponsorByToken: bigint,
+    balanceGovernance: bigint,
+    balanceAdmin: bigint,
+    balanceReputation: bigint
+  ] & {
+    balanceToken: bigint;
+    balanceSponsorByAdmin: bigint;
+    balanceSponsorByToken: bigint;
+    balanceGovernance: bigint;
+    balanceAdmin: bigint;
+    balanceReputation: bigint;
+  };
 }
 
 export interface TokenReputationInterface extends Interface {
@@ -117,6 +142,7 @@ export interface TokenReputationInterface extends Interface {
       | "depositReputationFromWallet"
       | "factory"
       | "getInfo"
+      | "getInfoInteraction"
       | "isBanned"
       | "lastAirdropClaimed"
       | "legacyLength"
@@ -216,6 +242,10 @@ export interface TokenReputationInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "factory", values?: undefined): string;
   encodeFunctionData(functionFragment: "getInfo", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "getInfoInteraction",
+    values: [AddressLike]
+  ): string;
   encodeFunctionData(
     functionFragment: "isBanned",
     values: [AddressLike]
@@ -344,6 +374,10 @@ export interface TokenReputationInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "factory", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "getInfo", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "getInfoInteraction",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "isBanned", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "lastAirdropClaimed",
@@ -671,6 +705,12 @@ export interface TokenReputation extends BaseContract {
 
   getInfo: TypedContractMethod<[], [DataTypes.TokenInfoStructOutput], "view">;
 
+  getInfoInteraction: TypedContractMethod<
+    [_token: AddressLike],
+    [DataTypes.TokenInteractionStructOutput],
+    "view"
+  >;
+
   isBanned: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
 
   lastAirdropClaimed: TypedContractMethod<
@@ -869,6 +909,13 @@ export interface TokenReputation extends BaseContract {
   getFunction(
     nameOrSignature: "getInfo"
   ): TypedContractMethod<[], [DataTypes.TokenInfoStructOutput], "view">;
+  getFunction(
+    nameOrSignature: "getInfoInteraction"
+  ): TypedContractMethod<
+    [_token: AddressLike],
+    [DataTypes.TokenInteractionStructOutput],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "isBanned"
   ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;

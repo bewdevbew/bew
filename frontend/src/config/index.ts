@@ -5,7 +5,7 @@ const CONFIGS = {
   development: {
     abis: LocalABIs,
     addresses: LocalAddresses,
-    provider: "http://localhost:8545",
+    provider: "http://127.0.0.1:8545/",
   },
   // TODO
   test: {

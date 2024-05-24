@@ -70,7 +70,7 @@ const page = () => {
           </a>
         </Callout>
         <div className="flex gap-10">
-          <Card className=" gap-10 items-center justify-center h-full">
+          <Card className=" gap-10 items-center justify-center h-full magicpattern">
             {
               [
                 <>

@@ -164,10 +164,7 @@ contract TokenReputation is ERC20, Ownable {
 
     modifier onlyAdminOf(address _token) {
         // TODO Faire une fonction dans la factory pour révoquer l'admin si balanceOf(caller) a > totalSupply/2
-        require(
-            iFactory.adminOf(_token) == msg.sender,
-            Errors.CALLER_NOT_ADMIN
-        );
+        require(_adminOf(_token) == msg.sender, Errors.CALLER_NOT_ADMIN);
         _;
     }
 
@@ -231,8 +228,8 @@ contract TokenReputation is ERC20, Ownable {
      * @notice Fonction pour récupérer les informations onchain relatif au TokenReputation
      */
 
-    function getInfo() public view returns (DataTypes.TokenInfo memory) {
-        address admin = iFactory.adminOf(address(this));
+    function getInfo() external view returns (DataTypes.TokenInfo memory) {
+        address admin = _adminOf(address(this));
         return
             DataTypes.TokenInfo({
                 admin: admin,
@@ -247,12 +244,66 @@ contract TokenReputation is ERC20, Ownable {
             });
     }
 
-    function isContract(address _addr) private view returns (bool) {
-        uint32 size;
-        assembly {
-            size := extcodesize(_addr)
-        }
-        return (size > 0);
+    /**
+     * @notice Fonction pour récupérer les informations onchain relatif à l'interaction
+     * d'un TokenReputation avec un autre TokenReputation
+     *
+     * Prenons l'exemple avec :
+     * - Token Alice (A) correspond à this token
+     * - Token Bob (B) correspond à _token
+     */
+
+    function getInfoInteraction(
+        address _token
+    )
+        external
+        view
+        returns (
+            // DataTypes.TokenInteraction memory thisTokenFromTarget,
+            DataTypes.TokenInteraction memory
+        )
+    {
+        address adminOfTarget = _adminOf(_token);
+        ITokenReputation iToken = ITokenReputation(_token);
+
+        // thisTokenFromTarget = DataTypes.TokenInteraction({
+        //     balanceToken: balanceOf(_token),
+        //     balanceSponsor: iToken.poolTokensForSponsor(_token, address(this)),
+        //     balanceGovernance: iToken.poolTokensForGovernance(address(this)),
+        //     balanceReputation: iToken.poolTokensReputation(address(this)),
+        //     balanceAdmin: balanceOf(adminOfTarget)
+        // });
+
+        return
+            DataTypes.TokenInteraction({
+                // Retourne la balance de Token Alice dans le contrat de Bob
+                balanceToken: balanceOf(_token),
+                // Retourne la balance d'Alice des tokens de Bob dans la pool sponsor du contrat d'Alice
+                balanceSponsorByAdmin: poolTokensForSponsor[address(this)][
+                    _token
+                ],
+                // Retourne la balance de tokens Alice dans la pool de Bob au sein du contrat d'Alice
+                balanceSponsorByToken: poolTokensForSponsor[_token][
+                    address(this)
+                ],
+                // Retourne la balance de tokens Bob dans la gouvernance du contrat d'Alice
+                balanceGovernance: poolTokensForGovernance[_token],
+                // Retourne la balance de tokens Bob dans la pool de réputation du contrat d'Alice
+                balanceReputation: poolTokensReputation[_token],
+                balanceAdmin: balanceOf(adminOfTarget)
+            });
+    }
+
+    // function isContract(address _addr) private view returns (bool) {
+    //     uint32 size;
+    //     assembly {
+    //         size := extcodesize(_addr)
+    //     }
+    //     return (size > 0);
+    // }
+
+    function _adminOf(address _token) internal view returns (address) {
+        return iFactory.adminOf(_token);
     }
 
     /**
@@ -326,13 +377,6 @@ contract TokenReputation is ERC20, Ownable {
         return _onboardParticipant(_for, _name, _symbol);
     }
 
-    // TODO delete si pas besoin
-    function _findRules(
-        address _for
-    ) internal view returns (DataTypes.AdminRules memory) {
-        return iFactory.rulesOf(address(this), _for);
-    }
-
     /**
      * @notice Fonction pour miner des tokens et augmenter la supply du TokenReputation
      * @dev Cette fonction ne peut être utilisé que par la factory.
@@ -372,8 +416,8 @@ contract TokenReputation is ERC20, Ownable {
     ) external {
         require(
             msg.sender == _sponsor ||
-                iFactory.adminOf(_erc20) == msg.sender ||
-                iFactory.adminOf(_sponsor) == msg.sender,
+                _adminOf(_erc20) == msg.sender ||
+                _adminOf(_sponsor) == msg.sender,
             Errors.CALLER_CANT_USE_FUNCTION
         );
         require(
@@ -506,10 +550,7 @@ contract TokenReputation is ERC20, Ownable {
         uint256 _amount
     ) public returns (bool) {
         require(!isBanned[msg.sender], Errors.CALLER_IS_BANNED);
-        require(
-            iFactory.adminOf(msg.sender) != address(0),
-            Errors.CALLER_NOT_TOKEN
-        );
+        require(_adminOf(msg.sender) != address(0), Errors.CALLER_NOT_TOKEN);
         require(_amount > 0, Errors.AMOUNT_CANT_BE_ZERO);
         require(
             ITokenReputation(msg.sender).transferFrom(
@@ -548,7 +589,7 @@ contract TokenReputation is ERC20, Ownable {
             Errors.INSUFFICIENT_BALANCE
         );
 
-        address admin = iFactory.adminOf(_token);
+        address admin = _adminOf(_token);
         uint256 feeAmount;
         if (_token != address(this)) {
             feeAmount =
@@ -567,8 +608,7 @@ contract TokenReputation is ERC20, Ownable {
         iToken.approve(_toNewNetwork, netAmount);
         ITokenReputation(_toNewNetwork).depositReputation(netAmount);
 
-        if (feeAmount > 0)
-            iToken.transfer(iFactory.adminOf(address(this)), feeAmount);
+        if (feeAmount > 0) iToken.transfer(_adminOf(address(this)), feeAmount);
     }
 
     /**
@@ -594,8 +634,7 @@ contract TokenReputation is ERC20, Ownable {
         }
         ITokenReputation iToken = ITokenReputation(token);
         iToken.transfer(msg.sender, netAmount);
-        if (feeAmount > 0)
-            iToken.transfer(iFactory.adminOf(address(this)), feeAmount);
+        if (feeAmount > 0) iToken.transfer(_adminOf(address(this)), feeAmount);
     }
 
     /**

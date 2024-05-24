@@ -1,6 +1,6 @@
 import { cn } from "@/utils/ui";
-import { ArrowDownRight } from "lucide-react";
-import React, { ReactNode } from "react";
+import { ArrowDownRight, Lock, Pencil } from "lucide-react";
+import React, { ReactNode, useState } from "react";
 type TVariant = "default" | "dot";
 type TFooter = {
   onClick?: any;
@@ -11,6 +11,7 @@ type TFooter = {
 
 export type CardType = {
   variant?: TVariant;
+  layoutId?: string;
   children: ReactNode;
   header?: {
     icon?: any;
@@ -23,6 +24,7 @@ export type CardType = {
   height?: string;
   style?: any;
   padding?: string;
+
   width?: string | number;
   className?: string;
   footer?: TFooter | true;
@@ -31,7 +33,10 @@ export type CardType = {
 import { cva, type VariantProps } from "class-variance-authority";
 import { HeaderCard } from "./header-card";
 import { useModule } from "@/hooks/useModule";
-import { motion } from "framer-motion";
+import { m, motion } from "framer-motion";
+import { Input } from "./input";
+import { useForm } from "@/context/form";
+import { Button } from "./button";
 
 const cardVariants = cva("bg-background", {
   variants: {
@@ -59,6 +64,7 @@ export const Card = ({
   onClick,
   variant = "default",
   style,
+  layoutId = "all",
 }: CardType) => {
   if (footer !== undefined && footer === true && header?.title) {
     footer = {
@@ -66,20 +72,58 @@ export const Card = ({
     };
   }
 
-  const { data: moduleSystem } = useModule();
+  const { getValue, set } = useForm();
+  const { data: moduleSystem, set: setModule } = useModule();
   const classNameModule = moduleSystem?.card?.className?.value;
+  const [isHover, setIsHover] = useState(false);
 
+  const localState = moduleSystem?.ids?.[layoutId];
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const handleDrag = (event: any, info: any) => {
+    setPosition({ x: info.point.x, y: info.point.y });
+  };
+
+  if (isHover) {
+    console.log({
+      layoutId,
+      test: getValue(`className-${layoutId}`),
+      position,
+      moduleSystem,
+    });
+  }
   return (
     <motion.div
       drag
+      onDrag={handleDrag}
       dragConstraints={constraintsRef}
+      transition={{ type: "spring", damping: 10, delay: 0.5 }}
+      initial={{
+        x: 0,
+        y: 0,
+      }}
+      animate={{
+        x: localState?.position?.x || 0,
+        y: localState?.position?.y || 0,
+      }}
+      onHoverStart={() => {
+        set("card-hovered", layoutId);
+        setIsHover(true);
+      }}
+      onHoverEnd={() => {
+        set("card-hovered", null);
+        setIsHover(false);
+      }}
       onClick={onClick}
       style={style}
       className={cn(
         padding,
-        `${width} ${height}  shadow-lg  flex border overflow-hidden rounded-lg flex-col`,
+        `${width} ${height}   shadow-lg  flex border relative rounded-lg flex-col`,
         !["ADMIN", "DEV"].includes(module) && classNameModule,
-        cardVariants({ variant, className: className })
+        cardVariants({ variant, className: className }),
+        // TODO faire avec les keys
+        getValue(`className-${layoutId}`) || getValue(`className-all`),
+        getValue("card-hovered") === layoutId && "border-info"
       )}
     >
       {header ? (
@@ -115,6 +159,47 @@ export const Card = ({
       ) : (
         <></>
       )}
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{
+          opacity: isHover ? 1 : 0,
+        }}
+        className="absolute bottom-0 right-0 translate-x-full translate-y-full  "
+      >
+        <>
+          {layoutId !== "all" && (
+            <Button
+              onClick={() => {
+                setModule(
+                  "ids" as any,
+                  {
+                    ...moduleSystem?.ids,
+                    [layoutId]: {
+                      className:
+                        getValue(`className-${layoutId}`) ||
+                        getValue(`className-all`),
+                      position: position,
+                    },
+                  } as any
+                );
+              }}
+              variant={"ghost"}
+              className="text-info"
+            >
+              <Lock />
+            </Button>
+          )}
+
+          <div className="flex items-center gap-5 text-info">
+            <Input
+              label={{ icon: <Pencil />, text: "Edit className" }}
+              target={`className-${layoutId}`}
+              placeholder="Custom Card"
+            />
+          </div>
+        </>
+      </motion.div>
     </motion.div>
   );
 };
