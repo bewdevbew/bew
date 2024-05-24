@@ -458,7 +458,7 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
               category="value"
               index="label"
               valueFormatter={() =>
-                `% ${dominances.admin + dominances.network}`
+                `% ${Number(dominances.admin + dominances.network)}`
               }
               colors={["green", "cyan", "red"]}
               className="w-40"

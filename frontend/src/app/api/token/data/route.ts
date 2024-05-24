@@ -7,10 +7,7 @@ import {
   TokenReputation,
   TokenReputationFactory,
 } from "../../../../../contract/typechain";
-import {
-  calculateOnboardToken,
-  calculateTokenDominance,
-} from "@/utils/contract";
+
 export type ContractType = {
   token: TokenReputation;
   factory: TokenReputationFactory;
@@ -30,7 +27,7 @@ export const getContract = <T extends keyof ContractType>(
 };
 
 export async function GET(request: NextRequest) {
-  const adminAddress = request.nextUrl.searchParams.get("address");
+  const adminAddress = request.nextUrl.searchParams.get("adminAddress");
   const peerAdminAddress = request.nextUrl.searchParams.get("peerAdminAddress");
 
   try {
@@ -50,6 +47,7 @@ export async function GET(request: NextRequest) {
     const events = await iToken.queryFilter(iToken.filters.NewTokenOnboarded());
 
     let interaction: TokenReputationType["interaction"] | undefined;
+
     if (
       ethers.isAddress(peerAdminAddress) &&
       ethers.ZeroAddress !== peerAdminAddress &&

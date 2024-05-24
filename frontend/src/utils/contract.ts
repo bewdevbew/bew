@@ -175,7 +175,9 @@ export const calculateTokenDominance = ({
   // Le network mine x% en fonction de la supply du token qu'il crée
   console.log({ balanceAdmin, supply, balanceNetwork });
   return {
-    admin: (Number(balanceAdmin) / Number(supply)) * 100,
-    network: (Number(balanceNetwork) / Number(supply)) * 100,
+    admin: Number(((Number(balanceAdmin) / Number(supply)) * 100).toFixed(2)),
+    network: Number(
+      ((Number(balanceNetwork) / Number(supply)) * 100).toFixed(2)
+    ),
   };
 };
