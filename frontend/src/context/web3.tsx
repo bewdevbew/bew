@@ -12,6 +12,17 @@ import {
   production,
 } from "@lens-protocol/react-web";
 import { bindings } from "@lens-protocol/wagmi";
+import XMTPProvider from "@/context/xmtp";
+
+/**
+ *
+ * @notice Met en place la stack:
+ *
+ * * Wagmi + ConnectKit
+ * * Lens
+ * * XMTP
+ * *
+ */
 
 // connect kit doesn't export the config type, so we create it here
 type ConnectKitConfig = Parameters<typeof getDefaultConfig>[0];
@@ -82,7 +93,11 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <ConnectKitProvider>
-          <LensProvider config={lensConfig}>{children}</LensProvider>
+          <LensProvider config={lensConfig}>
+            <XMTPProvider>
+              <>{children}</>
+            </XMTPProvider>
+          </LensProvider>
         </ConnectKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

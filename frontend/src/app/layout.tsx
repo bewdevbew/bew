@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 
 import { cn } from "@/utils/ui";
-import { Web3Provider } from "@/sections/provider/Web3Provider";
+import { Web3Provider } from "@/context/web3";
 import { AppProvider } from "@/context/app";
 import { Toaster } from "@/components/ui/toaster";
 import { Header } from "@/sections/layout/Header";

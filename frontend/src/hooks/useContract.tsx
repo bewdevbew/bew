@@ -5,7 +5,7 @@ import {
   TokenReputationFactory,
 } from "../../contract/typechain";
 import { CONFIG } from "@/config";
-import { wagmiConfig } from "@/sections/provider/Web3Provider";
+import { wagmiConfig } from "@/context/web3";
 import { Contract, ethers } from "ethers";
 import { DataTypes } from "../../contract/typechain/contracts/TokenReputation";
 import { useQuery } from "@tanstack/react-query";

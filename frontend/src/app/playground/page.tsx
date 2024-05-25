@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { APP } from "@/constants/app";
 import { useAuth } from "@/context/app";
 import { cn } from "@/utils/ui";
-import { Brain, Pencil, Webhook } from "lucide-react";
+import { Brain, File, Pencil, Webhook } from "lucide-react";
 import Link from "next/link";
 import { useRef } from "react";
 import { useAccount } from "wagmi";
@@ -57,6 +57,19 @@ export default () => {
                   Build your own dApp & share your works
                   <br />
                   with your reputation token
+                </>
+              ),
+            },
+            {
+              header: "Documentation",
+              icon: <File />,
+              title: `Post documentation`,
+              href: "/playground/documentation",
+              desc: (
+                <>
+                  Write your own documentation
+                  <br />
+                  about your token profile
                 </>
               ),
             },

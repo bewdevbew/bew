@@ -1,6 +1,6 @@
 "use client";
 import { Flow } from "@/components/common/reactflow";
-import { TextH } from "@/components/common/text/TextH";
+
 import { ProfileAvatar } from "@/components/features/profile/ProfileAvatar";
 import { ProfileName } from "@/components/features/profile/ProfileName";
 import { useAuth } from "@/context/app";
@@ -18,8 +18,6 @@ export default ({ params }: { params: { address: `0x${string}` } }) => {
     address: params.address,
     enabled: !!address || rest.status !== "connected",
   });
-
-  console.log({ session, profile });
 
   const current = profile?.token?.interaction?.current;
   const peer = profile?.token?.interaction?.peer;
@@ -230,22 +228,6 @@ export default ({ params }: { params: { address: `0x${string}` } }) => {
               </>
             ),
           },
-
-          //   {
-          //     icon: <ProfileAvatar size={30} address={session?.token?.admin} />,
-          //     title: formatNumber(current.balanceSponsorByAdmin),
-          //     subline: "Balance Sponsor",
-          //   },
-          //   {
-          //     icon: <ProfileAvatar size={30} address={session?.token?.admin} />,
-          //     title: formatNumber(current.balanceGovernance),
-          //     subline: "Balance Governance",
-          //   },
-          //   {
-          //     icon: <ProfileAvatar size={30} address={session?.token?.admin} />,
-          //     title: formatNumber(current.balanceReputation),
-          //     subline: "Balance Reputation",
-          //   },
         ]}
       />
     </div>

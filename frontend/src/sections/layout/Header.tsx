@@ -6,6 +6,8 @@ import Link from "next/link";
 import { ConnectKitButton } from "connectkit";
 import { APP } from "@/constants/app";
 import { useAccount } from "wagmi";
+import { Button } from "@/components/ui/button";
+import { Mail } from "lucide-react";
 
 export function Header() {
   const pathname = usePathname();
@@ -59,6 +61,9 @@ export function Header() {
         pl-8 gap-4 pb-3 sm:p-0
       "
       >
+        <Button href="/social/message">
+          <Mail />
+        </Button>
         <ConnectKitButton />
       </div>
     </header>

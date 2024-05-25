@@ -56,7 +56,7 @@ export default function RootLayout({
                 },
                 {
                   name: "Manage tokens",
-                  href: `/profile/${address}`,
+                  href: `/profile/${address}/token`,
                   icon: <Badge />,
                 },
                 {

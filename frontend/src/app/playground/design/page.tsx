@@ -17,7 +17,7 @@ import { Callout } from "@tremor/react";
 import { APP } from "@/constants/app";
 import Link from "next/link";
 
-const page = () => {
+const PagePlaygroundDesign = () => {
   const { set, getValue } = useForm();
 
   const patterns = [
@@ -180,4 +180,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default PagePlaygroundDesign;
