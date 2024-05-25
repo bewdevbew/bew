@@ -50,6 +50,8 @@ import { TextTruncated } from "@/components/common/text/TextTruncated";
 import { PublicationEncrypted } from "./PublicationEncrypted";
 import { PublicationBtnUpvotes } from "./PublicationBtns";
 import { PublicationBtnCreateMirror } from "./PublicationBtnCreateMirror";
+import { HoverCard } from "@/components/ui/hover-card";
+import { useApi } from "@/hooks/useApi";
 
 type PublicationProps = {
   publication: ExplorePublication | AnyPublication;
@@ -90,7 +92,7 @@ const PublicationPost = ({
   variants?: "commentary" | undefined;
 }) => {
   const { metadata, by, stats, __typename, ...rest } = publication;
-  const { execute: toggleBookmark, loading, error } = useBookmarkToggle();
+  const { execute: toggleBookmark } = useBookmarkToggle();
   const { execute: toggleNotInterested } = useNotInterestedToggle();
   const { execute: toggleHidePublication } = useHidePublication();
 
@@ -100,6 +102,16 @@ const PublicationPost = ({
   const appKnown = LENS_APPS.find(
     (app) => app.id === publication?.publishedOn?.id
   );
+
+  const [textTranslate, setTextTranslate] = useState<string | null>(null);
+  const { execute: translate } = useApi({
+    path: "/ai/translate",
+    params: {
+      text: (publication.metadata as any)?.content,
+      lang: navigator?.language || navigator?.languages[0],
+    },
+    enabled: false,
+  });
 
   return (
     <div
@@ -122,106 +134,125 @@ const PublicationPost = ({
             </>
           )}
         </div>
-        {/* <ButtonDropdownMenu
-          className="absolute top-0 right-0"
-          groups={
-            [
-              [
-                {
-                  content: "Report Post",
-                  variant: "error",
-                  Icon: <TriangleAlert />,
+        <HoverCard className="absolute top-3 right-0" trigger={":"}>
+          <div className="flex flex-col">
+            {[
+              {
+                content: "Report Post",
+                variant: "destructive",
+                Icon: <TriangleAlert />,
+              },
+              {
+                content: publication?.operations?.isNotInterested
+                  ? "I'm interested"
+                  : "Not interested",
+                Icon: <EyeOff />,
+                onClick: async () => {
+                  try {
+                    await toggleNotInterested({ publication });
+                    toast({
+                      title: "Success",
+                      description: "Not interested toggled",
+                    });
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      variant: "destructive",
+                      description: (error as { message: string }).message,
+                    });
+                  }
                 },
-                {
-                  content: publication?.operations?.isNotInterested
-                    ? "I'm interested"
-                    : "Not interested",
-                  Icon: <EyeOff />,
-                  onClick: async () => {
-                    try {
-                      await toggleNotInterested({ publication });
-                      toast({
-                        title: "Success",
-                        description: "Not interested toggled",
-                      });
-                    } catch (error) {
-                      toast({
-                        title: "Error",
-                        variant: "destructive",
-                        description: (error as { message: string }).message,
-                      });
-                    }
-                  },
+              },
+              publication?.by?.ownedBy?.address === address && {
+                content: publication?.isHidden ? "Remove hide" : "Hide comment",
+                Icon: <Ban />,
+                onClick: async () => {
+                  try {
+                    console.log({ publication });
+                    const result = await toggleHidePublication({
+                      publication,
+                    });
+                    console.log({ publication, result });
+                    toast({
+                      title: "Success",
+                      description: "Comment hidded",
+                    });
+                  } catch (error) {
+                    console.log({ error });
+                    toast({
+                      title: "Error",
+                      variant: "destructive",
+                      description: (error as { message: string }).message,
+                    });
+                  }
                 },
-                publication?.by?.ownedBy?.address === address && {
-                  content: publication?.isHidden
-                    ? "Remove hide"
-                    : "Hide comment",
-                  Icon: <Ban />,
-                  onClick: async () => {
-                    try {
-                      console.log({ publication });
-                      const result = await toggleHidePublication({
-                        publication,
-                      });
-                      console.log({ publication, result });
-                      toast({
-                        title: "Success",
-                        description: "Comment hidded",
-                      });
-                    } catch (error) {
-                      console.log({ error });
-                      toast({
-                        title: "Error",
-                        variant: "destructive",
-                        description: (error as { message: string }).message,
-                      });
-                    }
-                  },
+              },
+              {
+                content: publication?.operations?.hasBookmarked
+                  ? "Remove bookmark"
+                  : "Bookmark",
+                Icon: <Bookmark />,
+                onClick: async () => {
+                  try {
+                    console.log({ publication });
+                    await toggleBookmark({ publication });
+                    toast({
+                      title: "Success",
+                      description: "Bookmark toggled",
+                    });
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      variant: "destructive",
+                      description: (error as { message: string }).message,
+                    });
+                  }
                 },
-                {
-                  content: publication?.operations?.hasBookmarked
-                    ? "Remove bookmark"
-                    : "Bookmark",
-                  Icon: <Bookmark />,
-                  onClick: async () => {
-                    try {
-                      console.log({ publication });
-                      await toggleBookmark({ publication });
-                      toast({
-                        title: "Success",
-                        description: "Bookmark toggled",
-                      });
-                    } catch (error) {
-                      toast({
-                        title: "Error",
-                        variant: "destructive",
-                        description: (error as { message: string }).message,
-                      });
-                    }
-                  },
+              },
+              {
+                content: "Share",
+                Icon: <SquareArrowUpRight />,
+              },
+              {
+                content: "Translate",
+                onClick: async () => {
+                  const text = await translate();
+                  if (text) {
+                    setTextTranslate(text);
+                  } else {
+                    toast({
+                      title: "Error Translate Model",
+                      description:
+                        "An error occured during translation. Please retry.",
+                      variant: "destructive",
+                    });
+                  }
                 },
-                {
-                  content: "Share",
-                  Icon: <SquareArrowUpRight />,
-                },
-                {
-                  content: "Translate",
-                  Icon: <Languages />,
-                },
-                {
-                  content: "Copy post text",
-                  Icon: <ClipboardCopy />,
-                },
-              ],
-            ] as any
-          }
-        /> */}
+                Icon: <Languages />,
+              },
+              {
+                content: "Copy post text",
+                Icon: <ClipboardCopy />,
+              },
+            ]
+              .filter((el) => el)
+              .map((el: any, i) => (
+                <Button
+                  variant={el?.variant}
+                  onClick={el?.onClick}
+                  key={`btn-publication-${publication.id}-${i}`}
+                  className="gap-3 "
+                >
+                  {el?.content} {el?.Icon}
+                </Button>
+              ))}
+          </div>
+        </HoverCard>
         <div className="w-full">
           <div className="w-full">
             <div className="flex gap-10 items-center w-full">
               <Link
-                href={`/profile/${by?.id}`}
+                href={`/profile/${by.ownedBy.address}`}
                 className="mb-1 hover:text-info font-medium leading-none"
               >
                 <ProfileName profile={by} showHandle />
@@ -249,7 +280,9 @@ const PublicationPost = ({
               />
               <article className="max-w-[800px] mt-4 break-words">
                 <TextTruncated maxLength={200}>
-                  {(metadata as { content: string })?.content?.replace(
+                  {(
+                    textTranslate || (metadata as { content: string })?.content
+                  )?.replace(
                     /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi,
                     "[LINK]($1)"
                   )}
@@ -264,12 +297,6 @@ const PublicationPost = ({
                 if (!publication?.metadata) {
                   return;
                 }
-                // setModal("POST_COMMENT", {
-                //   publication: {
-                //     ...publication,
-                //     metadata: publication?.metadata || {},
-                //   },
-                // });
               }}
               className="rounded-full "
               variant={"ghost"}
@@ -299,7 +326,7 @@ const PublicationPost = ({
                   : undefined
               }
               className={cn(
-                "flex items-end gap-2 opacity-50 hover:opacity-100 text-info text-xs ml-auto absolute top-3 right-5",
+                "flex items-end gap-2 opacity-50 hover:opacity-100 text-info text-xs  absolute bottom-3 right-0",
                 appKnown && APP.id !== appKnown.id && "cursor-pointer"
               )}
             >

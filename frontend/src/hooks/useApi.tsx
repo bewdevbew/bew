@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 interface APIResponseType {
   ["/token/data"]: TokenReputationType;
+  ["/ai/translate"]: string;
 }
 
 export const api = async <P extends keyof APIResponseType>({
@@ -56,5 +57,6 @@ export const useApi = <P extends keyof APIResponseType>({
 
   return {
     ...o,
-  } as typeof o & { data: AuthAppType["data"] };
+    execute: async () => await get(),
+  };
 };
