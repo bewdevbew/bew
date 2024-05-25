@@ -2,7 +2,7 @@ import { Logo } from "@/components/assets/Logo";
 import { AvatarUnknow } from "@/components/common/profile/AvatarUnknow";
 import { TextH } from "@/components/common/text/TextH";
 import { HoverCard } from "@/components/ui/hover-card";
-import { DEW_STANDARD } from "@/config/standard";
+import { DEW_STANDARD } from "@/constants/standard";
 import {
   AnimatedBeamDefault,
   AnimatedBeamMultipleInput,

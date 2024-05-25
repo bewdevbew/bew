@@ -1,11 +1,8 @@
-import { CONFIG } from "@/config";
-import { ethers } from "ethers";
 import {
   TokenReputation,
   TokenReputationFactory,
 } from "../../contract/typechain";
-import { getContract } from "@/hooks/useContract";
-import { AuthAppType } from "@/context/app";
+
 import { TokenReputationType } from "@/types/dew/contract";
 
 export type ContractType = {
@@ -173,7 +170,7 @@ export const calculateTokenDominance = ({
   balanceNetwork,
 }: TokenReputationType) => {
   // Le network mine x% en fonction de la supply du token qu'il crée
-  console.log({ balanceAdmin, supply, balanceNetwork });
+
   return {
     admin: Number(((Number(balanceAdmin) / Number(supply)) * 100).toFixed(2)),
     network: Number(

@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { DEW_STANDARD } from "@/config/standard";
+import { DEW_STANDARD } from "@/constants/standard";
 
 import {
   Baseline,

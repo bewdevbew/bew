@@ -5,10 +5,10 @@ import { useAccount } from "wagmi";
 import { FormProvider } from "./form";
 import { Header } from "@/sections/layout/Header";
 
-import { Profile, useLastLoggedInProfile } from "@lens-protocol/react-web";
+import { Profile, useSession } from "@lens-protocol/react-web";
 import { TokenReputationType } from "@/types/dew/contract";
 import { useQuery } from "@tanstack/react-query";
-import { useProfile } from "@/hooks/useApp";
+
 import { api } from "@/hooks/useApi";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -26,24 +26,6 @@ export interface AuthAppType {
 
 // Création du contexte avec les types définis
 const AppContext = createContext<AuthAppType | undefined>(undefined);
-
-const placeholderData: AuthAppType["data"] = {
-  token: {
-    name: "",
-    symbol: "",
-    legacy: 0,
-    supply: "0",
-    admin: "0x",
-    network: "0x",
-    balanceAdmin: "0",
-    balanceNetwork: "0",
-    balance: "0",
-    address: "0x",
-    rules: {} as any,
-    events: {} as any,
-  },
-  lens: undefined,
-};
 
 // Fournisseur du contexte du formulaire
 export const AppProvider: React.FC<{ children: ReactNode }> = ({
@@ -65,7 +47,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const { address } = useAccount();
 
   const { toast } = useToast();
-  const { data: lens } = useLastLoggedInProfile({ for: address || "0x" });
+  const { data: lens } = useSession();
   const { data, isLoading, isSuccess, isError } = useQuery({
     enabled: !!address,
     queryKey: [address, "authToken"],
@@ -83,7 +65,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
         value={{
           data: {
             token: data as any,
-            lens,
+            lens: (lens as any)?.profile as Profile,
           },
           isLoading,
           isError,

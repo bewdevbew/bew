@@ -1,7 +1,5 @@
-import { CSSProperties, HTMLAttributes, ReactNode } from "react";
+import { ReactNode } from "react";
 import { DewUICore } from "./ui";
-// import { DewModuleBtn } from "./module_btn";
-import { ModuleWithType } from "@/utils";
 
 /**
  * API DeW Module

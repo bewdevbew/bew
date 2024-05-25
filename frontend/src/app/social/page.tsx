@@ -1,8 +1,6 @@
 "use client";
-import {
-  PublicationCard,
-  PublicationLoading,
-} from "@/components/features/publication/PublicationCard";
+import { PublicationCard } from "@/components/features/publication/PublicationCard";
+import { PublicationLoading } from "@/components/features/publication/PublicationLoading";
 import {
   AnyPublication,
   useExplorePublications,

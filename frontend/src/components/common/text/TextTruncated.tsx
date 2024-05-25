@@ -4,16 +4,16 @@ import React from "react";
 export const TextTruncated = ({
   children,
   maxLength = 100,
-  hover = false,
+  showTooltip = false,
 }: {
-  hover?: boolean;
+  showTooltip?: boolean;
   children: string;
-  maxLength: number;
+  maxLength?: number;
 }) => {
   if (children?.length <= maxLength) {
     return <>{children}</>;
   }
-  if (hover) {
+  if (showTooltip) {
     return (
       <HoverCard
         trigger={<span>{children?.substring?.(0, maxLength) + "..."}</span>}
