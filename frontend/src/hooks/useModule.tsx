@@ -3,6 +3,13 @@ import { DewModule, DewModuleCore, ModuleValue } from "@/types/dew/module";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
+
+/**
+ * 
+ * @notice Les Modules sont 
+ * 
+ */
+
 export const useModule = () => {
   const get = () => {
     if (typeof window === "undefined") return {};

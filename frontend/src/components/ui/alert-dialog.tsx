@@ -133,10 +133,21 @@ export function Modal({
   title,
   children,
   footer,
+  className,
+  variant = "outline",
 }: {
+  className?: string;
   trigger: React.ReactNode;
   title?: React.ReactNode;
   children: React.ReactNode;
+  variant?:
+    | "outline"
+    | "default"
+    | "ghost"
+    | "destructive"
+    | "link"
+    | "secondary"
+    | null;
   footer?: {
     cancel?: {
       children: React.ReactNode;
@@ -149,9 +160,14 @@ export function Modal({
   };
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
+
   return (
     <>
-      <Button onClick={() => setIsOpen(true)} variant="outline">
+      <Button
+        className={className}
+        onClick={() => setIsOpen(true)}
+        variant={variant}
+      >
         {trigger}
       </Button>
 

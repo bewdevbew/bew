@@ -38,6 +38,11 @@ interface ITokenReputation is IERC20, IOwnable {
         address _addr
     ) external view returns (DataTypes.AdminRules memory);
 
+    function transferReputation(
+        address _from,
+        uint256 _amount
+    ) external returns (bool);
+
     function isBanned(address _addr) external view returns (bool);
 
     function onboardParticipantToken(

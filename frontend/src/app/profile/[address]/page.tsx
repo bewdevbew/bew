@@ -2,6 +2,7 @@
 
 import { TextH } from "@/components/common/text/TextH";
 import { ProfileAvatar } from "@/components/features/profile/ProfileAvatar";
+import { ProfileBtnFollow } from "@/components/features/profile/ProfileBtnFollow";
 import { ProfileName } from "@/components/features/profile/ProfileName";
 import { TokenName } from "@/components/features/token/TokenName";
 import { TokenNetworkView } from "@/components/features/token/TokenNetworkView";
@@ -571,16 +572,20 @@ const PageProfile = ({ params }: { params: { address: `0x${string}` } }) => {
               )}
             </div>
 
-            <div className="flex max-w-[300px] mt-10  flex-wrap gap-2">
-              {lens?.interests?.map((el, i) => (
-                <div
-                  className="p-2 border-primary text-center border text-xs  rounded-full"
-                  key={`interest-${i}`}
-                >
-                  {el.replace(/_/g, " ").toLowerCase()}
-                </div>
-              ))}
-            </div>
+            {lens?.interests?.length && (
+              <div className="flex max-w-[300px] mt-10  flex-wrap gap-2">
+                {lens?.interests?.map((el, i) => (
+                  <div
+                    className="p-2 border-primary text-center border text-xs  rounded-full"
+                    key={`interest-${i}`}
+                  >
+                    {el.replace(/_/g, " ").toLowerCase()}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <ProfileBtnFollow profile={lens as any} />
           </>
         </Card>
 

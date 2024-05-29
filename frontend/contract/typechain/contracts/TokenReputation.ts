@@ -164,6 +164,7 @@ export interface TokenReputationInterface extends Interface {
       | "transferFrom"
       | "transferOnPoolReputation"
       | "transferOwnership"
+      | "transferReputation"
       | "transferReputationByAdmin"
       | "withdrawReputation"
       | "withdrawReputationFromFactory"
@@ -238,7 +239,7 @@ export interface TokenReputationInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "depositReputationFromWallet",
-    values: [AddressLike, BigNumberish]
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "factory", values?: undefined): string;
   encodeFunctionData(functionFragment: "getInfo", values?: undefined): string;
@@ -308,6 +309,10 @@ export interface TokenReputationInterface extends Interface {
   encodeFunctionData(
     functionFragment: "transferOwnership",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "transferReputation",
+    values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "transferReputationByAdmin",
@@ -436,6 +441,10 @@ export interface TokenReputationInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "transferReputation",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -696,7 +705,7 @@ export interface TokenReputation extends BaseContract {
   >;
 
   depositReputationFromWallet: TypedContractMethod<
-    [_from: AddressLike, _amount: BigNumberish],
+    [_amount: BigNumberish],
     [boolean],
     "nonpayable"
   >;
@@ -799,6 +808,12 @@ export interface TokenReputation extends BaseContract {
     "nonpayable"
   >;
 
+  transferReputation: TypedContractMethod<
+    [_from: AddressLike, _amount: BigNumberish],
+    [boolean],
+    "nonpayable"
+  >;
+
   transferReputationByAdmin: TypedContractMethod<
     [_token: AddressLike, _to: AddressLike, _amount: BigNumberish],
     [void],
@@ -898,11 +913,7 @@ export interface TokenReputation extends BaseContract {
   ): TypedContractMethod<[_amount: BigNumberish], [boolean], "nonpayable">;
   getFunction(
     nameOrSignature: "depositReputationFromWallet"
-  ): TypedContractMethod<
-    [_from: AddressLike, _amount: BigNumberish],
-    [boolean],
-    "nonpayable"
-  >;
+  ): TypedContractMethod<[_amount: BigNumberish], [boolean], "nonpayable">;
   getFunction(
     nameOrSignature: "factory"
   ): TypedContractMethod<[], [string], "view">;
@@ -1013,6 +1024,13 @@ export interface TokenReputation extends BaseContract {
   getFunction(
     nameOrSignature: "transferOwnership"
   ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "transferReputation"
+  ): TypedContractMethod<
+    [_from: AddressLike, _amount: BigNumberish],
+    [boolean],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "transferReputationByAdmin"
   ): TypedContractMethod<

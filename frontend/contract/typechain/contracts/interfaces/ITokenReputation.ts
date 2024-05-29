@@ -96,6 +96,7 @@ export interface ITokenReputationInterface extends Interface {
       | "transfer"
       | "transferFrom"
       | "transferOwnership"
+      | "transferReputation"
       | "withdrawReputationFromFactory"
   ): FunctionFragment;
 
@@ -205,6 +206,10 @@ export interface ITokenReputationInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "transferReputation",
+    values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "withdrawReputationFromFactory",
     values: [AddressLike, AddressLike, BigNumberish]
   ): string;
@@ -292,6 +297,10 @@ export interface ITokenReputationInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "transferReputation",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -509,6 +518,12 @@ export interface ITokenReputation extends BaseContract {
     "nonpayable"
   >;
 
+  transferReputation: TypedContractMethod<
+    [_from: AddressLike, _amount: BigNumberish],
+    [boolean],
+    "nonpayable"
+  >;
+
   withdrawReputationFromFactory: TypedContractMethod<
     [_token: AddressLike, _toNewNetwork: AddressLike, _amount: BigNumberish],
     [bigint],
@@ -664,6 +679,13 @@ export interface ITokenReputation extends BaseContract {
   getFunction(
     nameOrSignature: "transferOwnership"
   ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "transferReputation"
+  ): TypedContractMethod<
+    [_from: AddressLike, _amount: BigNumberish],
+    [boolean],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "withdrawReputationFromFactory"
   ): TypedContractMethod<

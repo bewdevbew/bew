@@ -59,7 +59,7 @@
   - Description: Peut voir le nombre de tokens lock dans le wallet d'`ADMIN`
   - Estimate: 0
   - Priority: 1
-  - Status: 0
+  - Status: 2
 
 - `USER`
 
@@ -79,7 +79,7 @@
   - Description: Être redirigé vers la page `create/token`
   - Estimate: 0
   - Priority: 1
-  - Status: 0
+  - Status: 3
 
 ## Create Token
 
@@ -104,7 +104,7 @@
 
   - Estimate: 0
   - Priority: 1
-  - Status: 0
+  - Status: 3
 
 - `USER`
 
@@ -146,3 +146,74 @@
   - Estimate: 0
   - Priority: 1
   - Status: 0
+
+
+
+## Profile
+
+- `USER`
+
+  - Description: Voir la dominance des tokens appartenant à ADMIN
+  - Estimate: 0
+  - Priority: 1
+  - Status: 3
+
+- `USER`
+
+  - Description: Choisir différentes formules de lancement tokens entre `CENTRALISER | WARD | DICTATOR | EXPLORER`
+
+  - Estimate: 2
+  - Priority: 1
+  - Status: 0
+
+- `USER`
+
+  [x] Description: Configurer le nom et le symbole du token
+
+  - Estimate: 0
+  - Priority: 1
+  - Status: 3
+
+- `USER`
+
+  - Description: Configurer la supply total du token
+  - Estimate: 0
+  - Priority: 1
+  - Status: 0
+
+- `USER`
+
+  - Description: Investir dès la création dans le token
+  - Estimate: 0
+  - Priority: 1
+  - Status: 0
+
+- `USER`
+
+  - Description: Configurer le nombre de tokens à distribuer à `ADMIN`
+  - Estimate: 0
+  - Priority: 1
+  - Status: 0
+
+- `USER`
+
+  - Description: Configurer le nombre de tokens à distribuer à `ADMIN` pour qu'il l'airdrop à la communauté
+  - Estimate: 0
+  - Priority: 3
+  - Status: 0
+
+- `USER`
+
+  - Description: Configurer le nombre de tokens à distribuer à `GUEST WALLET`
+  - Estimate: 0
+  - Priority: 3
+  - Status: 0
+
+- `SYSTEM`
+  - Description: Voir le score du token pour la `DECENTRALISATION | RISK NETWORK | RISK TOKEN`
+  - Estimate: 0
+  - Priority: 1
+  - Status: 0
+
+
+

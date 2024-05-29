@@ -78,6 +78,12 @@ async function main() {
     path.join(__dirname, "../../frontend/contract/typechain")
   );
   console.log("Typechain copied successfully!");
+  await token.onboardParticipant(
+    "0x21e17c3b8d2e0c0e1a56d8fb9c8b15df519973bd",
+    "Django",
+    "BOS"
+  );
+  console.log("Token Reputation2 deployed ");
   return contracts;
 }
 

@@ -38,7 +38,7 @@ import { Input } from "./input";
 import { useForm } from "@/context/form";
 import { Button } from "./button";
 
-const cardVariants = cva("bg-background", {
+const cardVariants = cva("bg-background transition", {
   variants: {
     variant: {
       default: "",
@@ -84,14 +84,6 @@ export const Card = ({
     setPosition({ x: info.point.x, y: info.point.y });
   };
 
-  if (isHover) {
-    console.log({
-      layoutId,
-      test: getValue(`className-${layoutId}`),
-      position,
-      moduleSystem,
-    });
-  }
   return (
     <motion.div
       drag

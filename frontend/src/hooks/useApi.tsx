@@ -1,12 +1,16 @@
 "use client";
 import { AuthAppType } from "@/context/app";
 import { useQuery } from "@tanstack/react-query";
-import { TokenReputationType } from "@/types/dew/contract";
+import { TokenBalances, TokenReputationType } from "@/types/dew/contract";
 import { useToast } from "@/components/ui/use-toast";
 
 interface APIResponseType {
   ["/token/data"]: TokenReputationType;
   ["/ai/translate"]: string;
+  ["/token/visitor"]: {
+    guest: TokenBalances<"guest">;
+    current: TokenBalances<"current">;
+  };
 }
 
 export const api = async <P extends keyof APIResponseType>({

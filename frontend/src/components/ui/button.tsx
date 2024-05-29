@@ -121,7 +121,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             className:
               !["ADMIN", "DEV", "DEV_SAFE"].includes(module) && classNameModule,
           }),
-          className
+          className,
+          props.disabled && "opacity-80"
         )}
         ref={ref}
         {...props}

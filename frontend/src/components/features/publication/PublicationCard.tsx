@@ -52,6 +52,7 @@ import { PublicationBtnUpvotes } from "./PublicationBtns";
 import { PublicationBtnCreateMirror } from "./PublicationBtnCreateMirror";
 import { HoverCard } from "@/components/ui/hover-card";
 import { useApi } from "@/hooks/useApi";
+import { ProfileBtnFollow } from "../profile/ProfileBtnFollow";
 
 type PublicationProps = {
   publication: ExplorePublication | AnyPublication;
@@ -113,6 +114,8 @@ const PublicationPost = ({
     enabled: false,
   });
 
+  console.log({ publication });
+
   return (
     <div
       className={cn(
@@ -163,16 +166,16 @@ const PublicationPost = ({
                   }
                 },
               },
+
               publication?.by?.ownedBy?.address === address && {
                 content: publication?.isHidden ? "Remove hide" : "Hide comment",
                 Icon: <Ban />,
                 onClick: async () => {
                   try {
-                    console.log({ publication });
                     const result = await toggleHidePublication({
                       publication,
                     });
-                    console.log({ publication, result });
+
                     toast({
                       title: "Success",
                       description: "Comment hidded",
@@ -241,11 +244,12 @@ const PublicationPost = ({
                   variant={el?.variant}
                   onClick={el?.onClick}
                   key={`btn-publication-${publication.id}-${i}`}
-                  className="gap-3 "
+                  className="gap-3 justify-between"
                 >
                   {el?.content} {el?.Icon}
                 </Button>
               ))}
+            <ProfileBtnFollow profile={publication.by} />
           </div>
         </HoverCard>
         <div className="w-full">

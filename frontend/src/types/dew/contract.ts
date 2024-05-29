@@ -49,3 +49,39 @@ export type TokenReputationType = {
     }[];
   };
 };
+
+export interface TokenBalances<K extends "current" | "guest"> {
+  type: K;
+  address: {
+    current: `0x${string}`;
+    guest: `0x${string}`;
+    tokenCurrent: `0x${string}`;
+    tokenGuest: `0x${string}`;
+  };
+  sponsor: {
+    ["current"]: {
+      personal: `${number}`;
+      temporary: `${number}`;
+    };
+    ["guest"]: {
+      personal: `${number}`;
+      temporary: `${number}`;
+    };
+  };
+  wallet: {
+    personal: `${number}`;
+    temporary: `${number}`;
+  };
+  reputation: {
+    personal: `${number}`;
+    temporary: `${number}`;
+  };
+  governance: {
+    personal: `${number}`;
+    temporary: `${number}`;
+  };
+  global: {
+    personal: `${number}`;
+    temporary: `${number}`;
+  };
+}

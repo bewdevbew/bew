@@ -462,6 +462,7 @@ contract TokenReputation is ERC20, Ownable {
         uint256 _amount
     ) internal {
         require(_amount > 0, Errors.AMOUNT_CANT_BE_ZERO);
+
         require(ERC20(_erc20).transferFrom(factory, address(this), _amount));
         poolTokensForSponsor[_for][_erc20] += _amount;
         emit Events.DepositSponsorship(_erc20, _for, _amount);
@@ -537,31 +538,32 @@ contract TokenReputation is ERC20, Ownable {
         return _depositReputation(msg.sender, _amount);
     }
 
-    // TODO retirer argument from et faire directement from = adminOf(msg.sender)
-    function depositReputationFromWallet(
+    function depositReputationFromWallet(uint _amount) public returns (bool) {
+        return _depositReputation(iFactory.tokenOf(msg.sender), _amount);
+    }
+
+    function transferReputation(
         address _from,
-        uint _amount
+        uint256 _amount
     ) public returns (bool) {
-        return _depositReputation(_from, _amount);
+        require(_adminOf(msg.sender) != address(0), Errors.CALLER_NOT_TOKEN);
+        _transfer(_from, msg.sender, _amount);
+        return true;
     }
 
     function _depositReputation(
         address _from,
         uint256 _amount
     ) public returns (bool) {
-        require(!isBanned[msg.sender], Errors.CALLER_IS_BANNED);
-        require(_adminOf(msg.sender) != address(0), Errors.CALLER_NOT_TOKEN);
+        require(!isBanned[_from], Errors.CALLER_IS_BANNED);
+        require(_adminOf(_from) != address(0), Errors.CALLER_NOT_TOKEN);
         require(_amount > 0, Errors.AMOUNT_CANT_BE_ZERO);
         require(
-            ITokenReputation(msg.sender).transferFrom(
-                _from,
-                address(this),
-                _amount
-            )
+            ITokenReputation(_from).transferReputation(msg.sender, _amount)
         );
 
-        poolTokensReputation[msg.sender] += _amount;
-        emit Events.DepositReputation(msg.sender, _amount);
+        poolTokensReputation[_from] += _amount;
+        emit Events.DepositReputation(_from, _amount);
         return true;
     }
 

@@ -11,6 +11,7 @@ import { DataTypes } from "../../contract/typechain/contracts/TokenReputation";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ReceiptIndianRupee } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 export type ContractType = {
   token: TokenReputation;
   factory: TokenReputationFactory;
@@ -30,15 +31,19 @@ export const getContract = <T extends keyof ContractType>(
   return contract as unknown as ContractType[T];
 };
 
-export const useContract = <C extends keyof ContractType>(contract: C) => {
+export const useContract = <C extends keyof ContractType>(
+  contract: C,
+  tokenAddress?: `0x${string}`
+) => {
   const { writeContract, data, error, isError, isPending, ...rest } =
     useWriteContract({
       config: wagmiConfig,
     });
 
   const abis = CONFIG.abis[contract] as any;
-  const address = CONFIG.addresses[contract] as `0x${string}`;
+  const address = (tokenAddress || CONFIG.addresses[contract]) as `0x${string}`;
 
+  const { toast } = useToast();
   const post = async (fn: keyof ContractType[C], args: any[]) => {
     const result = await writeContract({
       abi: abis,
@@ -50,6 +55,15 @@ export const useContract = <C extends keyof ContractType>(contract: C) => {
     return result;
   };
 
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: `Error ${(error as any)?.functionName || contract}`,
+        description: (error as any).shortMessage,
+        variant: "destructive",
+      });
+    }
+  }, [error]);
   return {
     post,
     error,
